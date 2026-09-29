@@ -1,7 +1,7 @@
 ---
 title: "Model Context Protocol (MCP)"
 ring: assess
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

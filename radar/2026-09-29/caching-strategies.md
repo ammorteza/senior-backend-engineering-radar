@@ -1,7 +1,7 @@
 ---
 title: "Caching strategies"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

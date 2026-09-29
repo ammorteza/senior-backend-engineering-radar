@@ -1,7 +1,7 @@
 ---
 title: "Consensus and Raft"
 ring: assess
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

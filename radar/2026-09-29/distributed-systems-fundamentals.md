@@ -1,7 +1,7 @@
 ---
 title: "Distributed systems fundamentals"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

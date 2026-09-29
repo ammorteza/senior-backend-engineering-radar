@@ -1,7 +1,7 @@
 ---
 title: "Data modeling and access patterns"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

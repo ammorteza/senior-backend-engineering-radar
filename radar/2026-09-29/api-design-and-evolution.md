@@ -1,7 +1,7 @@
 ---
 title: "API design and evolution"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

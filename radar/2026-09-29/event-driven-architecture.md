@@ -1,7 +1,7 @@
 ---
 title: "Event-driven architecture"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

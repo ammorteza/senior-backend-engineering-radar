@@ -1,7 +1,7 @@
 ---
 title: "Static analysis and linters"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

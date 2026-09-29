@@ -1,7 +1,7 @@
 ---
 title: "Domain-driven design"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

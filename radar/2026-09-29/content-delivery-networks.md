@@ -1,7 +1,7 @@
 ---
 title: "Content delivery networks"
 ring: trial
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

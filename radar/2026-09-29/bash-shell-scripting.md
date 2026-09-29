@@ -1,7 +1,7 @@
 ---
 title: "Bash / shell scripting"
 ring: adopt
-quadrant: languages-and-frameworks
+segment: languages-and-frameworks
 tags: [backend]
 ---
 

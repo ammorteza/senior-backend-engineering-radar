@@ -1,7 +1,7 @@
 ---
 title: "Zero trust architecture"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

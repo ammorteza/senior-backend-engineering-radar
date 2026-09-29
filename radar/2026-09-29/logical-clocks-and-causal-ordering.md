@@ -1,7 +1,7 @@
 ---
 title: "Logical clocks and causal ordering"
 ring: assess
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

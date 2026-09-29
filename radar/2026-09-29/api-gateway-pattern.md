@@ -1,7 +1,7 @@
 ---
 title: "API gateway pattern"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

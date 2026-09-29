@@ -1,7 +1,7 @@
 ---
 title: "PostgreSQL"
 ring: adopt
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

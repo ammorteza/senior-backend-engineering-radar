@@ -1,7 +1,7 @@
 ---
 title: "Workflow orchestration"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

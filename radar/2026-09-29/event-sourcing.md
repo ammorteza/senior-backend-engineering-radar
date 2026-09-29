@@ -1,7 +1,7 @@
 ---
 title: "Event sourcing"
 ring: assess
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

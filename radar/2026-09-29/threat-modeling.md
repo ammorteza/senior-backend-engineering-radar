@@ -1,7 +1,7 @@
 ---
 title: "Threat modeling"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

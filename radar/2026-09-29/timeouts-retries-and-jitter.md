@@ -1,7 +1,7 @@
 ---
 title: "Timeouts, retries and jitter"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

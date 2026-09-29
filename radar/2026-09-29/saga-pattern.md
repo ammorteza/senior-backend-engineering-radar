@@ -1,7 +1,7 @@
 ---
 title: "Saga pattern"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

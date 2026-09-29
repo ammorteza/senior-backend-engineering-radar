@@ -1,7 +1,7 @@
 ---
 title: "Docker"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

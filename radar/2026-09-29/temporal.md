@@ -1,7 +1,7 @@
 ---
 title: "Temporal"
 ring: trial
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Terraform / OpenTofu"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

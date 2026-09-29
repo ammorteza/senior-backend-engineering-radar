@@ -1,7 +1,7 @@
 ---
 title: "Horizontal partitioning and sharding"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

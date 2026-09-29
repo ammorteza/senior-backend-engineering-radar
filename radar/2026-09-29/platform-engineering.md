@@ -1,7 +1,7 @@
 ---
 title: "Platform engineering"
 ring: assess
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Vector databases"
 ring: assess
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

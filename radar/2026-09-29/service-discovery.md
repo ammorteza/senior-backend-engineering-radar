@@ -1,7 +1,7 @@
 ---
 title: "Service discovery"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

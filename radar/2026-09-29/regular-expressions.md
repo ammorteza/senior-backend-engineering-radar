@@ -1,7 +1,7 @@
 ---
 title: "Regular expressions"
 ring: adopt
-quadrant: languages-and-frameworks
+segment: languages-and-frameworks
 tags: [backend]
 ---
 

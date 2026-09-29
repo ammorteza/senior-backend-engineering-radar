@@ -1,7 +1,7 @@
 ---
 title: "Protocol Buffers"
 ring: adopt
-quadrant: languages-and-frameworks
+segment: languages-and-frameworks
 tags: [backend]
 ---
 

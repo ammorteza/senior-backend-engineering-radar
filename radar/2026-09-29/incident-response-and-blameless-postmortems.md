@@ -1,7 +1,7 @@
 ---
 title: "Incident response and blameless postmortems"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

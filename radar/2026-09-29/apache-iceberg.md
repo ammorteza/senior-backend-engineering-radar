@@ -1,7 +1,7 @@
 ---
 title: "Apache Iceberg"
 ring: assess
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

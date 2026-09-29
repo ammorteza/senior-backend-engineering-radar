@@ -1,7 +1,7 @@
 ---
 title: "Event schema evolution"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

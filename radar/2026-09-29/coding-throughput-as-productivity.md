@@ -1,7 +1,7 @@
 ---
 title: "Coding throughput as productivity"
 ring: caution
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

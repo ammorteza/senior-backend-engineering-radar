@@ -1,7 +1,7 @@
 ---
 title: "Cassandra / Dynamo-style databases"
 ring: trial
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Service mesh by default"
 ring: caution
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "GitHub Actions"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

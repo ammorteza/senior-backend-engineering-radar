@@ -1,7 +1,7 @@
 ---
 title: "Replication and consistency models"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

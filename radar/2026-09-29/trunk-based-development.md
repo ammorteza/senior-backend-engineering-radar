@@ -1,7 +1,7 @@
 ---
 title: "Trunk-based development"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

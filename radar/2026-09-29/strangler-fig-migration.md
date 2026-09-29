@@ -1,7 +1,7 @@
 ---
 title: "Strangler Fig migration"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Premature microservice decomposition"
 ring: caution
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

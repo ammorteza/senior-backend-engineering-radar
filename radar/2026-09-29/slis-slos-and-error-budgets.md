@@ -1,7 +1,7 @@
 ---
 title: "SLIs, SLOs and error budgets"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

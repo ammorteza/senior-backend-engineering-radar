@@ -1,7 +1,7 @@
 ---
 title: "Delve"
 ring: trial
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Change Data Capture"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

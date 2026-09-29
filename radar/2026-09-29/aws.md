@@ -1,7 +1,7 @@
 ---
 title: "AWS"
 ring: assess
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

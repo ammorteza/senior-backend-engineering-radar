@@ -1,7 +1,7 @@
 ---
 title: "eBPF observability tools"
 ring: assess
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

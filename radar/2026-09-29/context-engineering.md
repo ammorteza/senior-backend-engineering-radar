@@ -1,7 +1,7 @@
 ---
 title: "Context engineering"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

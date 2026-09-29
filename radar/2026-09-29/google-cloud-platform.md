@@ -1,7 +1,7 @@
 ---
 title: "Google Cloud Platform"
 ring: adopt
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

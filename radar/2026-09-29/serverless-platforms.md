@@ -1,7 +1,7 @@
 ---
 title: "Serverless platforms"
 ring: assess
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

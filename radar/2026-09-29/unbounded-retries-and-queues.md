@@ -1,7 +1,7 @@
 ---
 title: "Unbounded retries and queues"
 ring: caution
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

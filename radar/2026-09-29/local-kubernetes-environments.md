@@ -1,7 +1,7 @@
 ---
 title: "Local Kubernetes environments"
 ring: trial
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

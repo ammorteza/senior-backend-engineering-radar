@@ -1,7 +1,7 @@
 ---
 title: "EXPLAIN / EXPLAIN ANALYZE"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Service mesh"
 ring: assess
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

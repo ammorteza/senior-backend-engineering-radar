@@ -1,7 +1,7 @@
 ---
 title: "Graceful degradation"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

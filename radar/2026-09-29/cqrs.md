@@ -1,7 +1,7 @@
 ---
 title: "CQRS"
 ring: assess
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

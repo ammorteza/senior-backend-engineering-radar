@@ -1,7 +1,7 @@
 ---
 title: "Apache Kafka"
 ring: trial
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

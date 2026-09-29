@@ -1,7 +1,7 @@
 ---
 title: "AI-assisted software engineering"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

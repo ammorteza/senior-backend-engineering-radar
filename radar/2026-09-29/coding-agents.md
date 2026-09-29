@@ -1,7 +1,7 @@
 ---
 title: "Coding agents"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

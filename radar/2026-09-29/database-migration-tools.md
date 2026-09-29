@@ -1,7 +1,7 @@
 ---
 title: "Database migration tools"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

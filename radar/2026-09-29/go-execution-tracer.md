@@ -1,7 +1,7 @@
 ---
 title: "Go execution tracer"
 ring: trial
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "DORA metrics"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Architecture Decision Records"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

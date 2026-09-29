@@ -1,7 +1,7 @@
 ---
 title: "Observability"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

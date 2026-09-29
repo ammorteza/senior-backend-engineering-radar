@@ -1,7 +1,7 @@
 ---
 title: "Database indexing and query optimization"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

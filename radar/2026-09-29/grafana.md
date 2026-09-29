@@ -1,7 +1,7 @@
 ---
 title: "Grafana"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

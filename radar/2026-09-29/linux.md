@@ -1,7 +1,7 @@
 ---
 title: "Linux"
 ring: adopt
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

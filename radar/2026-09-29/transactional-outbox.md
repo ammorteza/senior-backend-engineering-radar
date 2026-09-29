@@ -1,7 +1,7 @@
 ---
 title: "Transactional Outbox"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

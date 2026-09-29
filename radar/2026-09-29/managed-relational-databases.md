@@ -1,7 +1,7 @@
 ---
 title: "Managed relational databases"
 ring: adopt
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

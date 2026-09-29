@@ -1,7 +1,7 @@
 ---
 title: "Concurrency control"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

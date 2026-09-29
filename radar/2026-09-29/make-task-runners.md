@@ -1,7 +1,7 @@
 ---
 title: "Make / task runners"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Cost-aware architecture / FinOps"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

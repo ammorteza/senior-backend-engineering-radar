@@ -1,7 +1,7 @@
 ---
 title: "Git"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

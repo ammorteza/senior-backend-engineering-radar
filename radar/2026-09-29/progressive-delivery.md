@@ -1,7 +1,7 @@
 ---
 title: "Progressive delivery"
 ring: trial
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

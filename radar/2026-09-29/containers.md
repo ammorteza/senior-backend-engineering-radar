@@ -1,7 +1,7 @@
 ---
 title: "Containers"
 ring: adopt
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

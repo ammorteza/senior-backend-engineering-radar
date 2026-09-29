@@ -1,7 +1,7 @@
 ---
 title: "Go pprof"
 ring: adopt
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

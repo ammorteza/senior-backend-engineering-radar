@@ -1,7 +1,7 @@
 ---
 title: "Load and performance testing"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

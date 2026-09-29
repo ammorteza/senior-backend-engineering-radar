@@ -1,7 +1,7 @@
 ---
 title: "Helm"
 ring: trial
-quadrant: tools
+segment: tools
 tags: [backend]
 ---
 

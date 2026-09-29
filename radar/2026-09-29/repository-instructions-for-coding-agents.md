@@ -1,7 +1,7 @@
 ---
 title: "Repository instructions for coding agents"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

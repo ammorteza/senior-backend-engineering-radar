@@ -1,7 +1,7 @@
 ---
 title: "Circuit breakers"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

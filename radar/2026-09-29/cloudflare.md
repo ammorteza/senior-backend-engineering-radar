@@ -1,7 +1,7 @@
 ---
 title: "Cloudflare"
 ring: assess
-quadrant: platforms
+segment: platforms
 tags: [backend]
 ---
 

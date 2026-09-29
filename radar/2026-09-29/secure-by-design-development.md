@@ -1,7 +1,7 @@
 ---
 title: "Secure-by-design development"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

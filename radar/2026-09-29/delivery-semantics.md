@@ -1,7 +1,7 @@
 ---
 title: "Delivery semantics"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

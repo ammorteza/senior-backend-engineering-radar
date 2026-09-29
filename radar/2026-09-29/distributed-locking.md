@@ -1,7 +1,7 @@
 ---
 title: "Distributed locking"
 ring: assess
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

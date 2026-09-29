@@ -1,7 +1,7 @@
 ---
 title: "Feature flags"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

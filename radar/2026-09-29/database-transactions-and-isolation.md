@@ -1,7 +1,7 @@
 ---
 title: "Database transactions and isolation"
 ring: adopt
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 

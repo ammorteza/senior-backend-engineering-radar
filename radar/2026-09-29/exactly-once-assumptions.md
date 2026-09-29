@@ -1,7 +1,7 @@
 ---
 title: "Exactly-once assumptions"
 ring: caution
-quadrant: techniques
+segment: techniques
 tags: [backend]
 ---
 
