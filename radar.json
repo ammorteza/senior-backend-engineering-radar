@@ -1,0 +1,814 @@
+[
+  {
+    "name": "Distributed systems fundamentals",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Reason about partial failure, network partitions, replication, consistency, coordination, time and failure domains."
+  },
+  {
+    "name": "Event-driven architecture",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Design asynchronous systems with explicit event contracts, ownership, ordering, replay, schema evolution and failure handling."
+  },
+  {
+    "name": "Idempotency",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Make retried requests and redelivered messages safe using idempotency keys, deduplication boundaries and durable state."
+  },
+  {
+    "name": "Delivery semantics",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand at-most-once, at-least-once and effectively-once processing and design consumers for duplicates and failures."
+  },
+  {
+    "name": "Timeouts, retries and jitter",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Use bounded timeouts and retry appropriate failures with exponential backoff and jitter without amplifying outages."
+  },
+  {
+    "name": "Circuit breakers",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Protect services from unhealthy dependencies and understand interaction with retries, timeouts and fallbacks."
+  },
+  {
+    "name": "Rate limiting and backpressure",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Control demand with rate limits, bounded queues, flow control and load shedding."
+  },
+  {
+    "name": "Caching strategies",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand cache-aside, invalidation, TTLs, consistency, hot keys, stampedes and cache failure modes."
+  },
+  {
+    "name": "API design and evolution",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Design stable APIs with clear contracts, errors, pagination, idempotency, compatibility and deprecation strategies."
+  },
+  {
+    "name": "Database transactions and isolation",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand ACID, MVCC, isolation levels, anomalies, locks, deadlocks and transaction boundaries."
+  },
+  {
+    "name": "Database indexing and query optimization",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Use execution plans, statistics, indexes and workload evidence to diagnose database performance."
+  },
+  {
+    "name": "Data modeling and access patterns",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Model data from access patterns, invariants, cardinality, lifecycle and scale."
+  },
+  {
+    "name": "Horizontal partitioning and sharding",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand shard-key selection, hotspots, resharding, fan-out queries and routing."
+  },
+  {
+    "name": "Replication and consistency models",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Reason about replication lag, read consistency, quorum concepts and strong versus eventual consistency."
+  },
+  {
+    "name": "Concurrency control",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand optimistic and pessimistic concurrency, atomic operations, races and lost updates."
+  },
+  {
+    "name": "Observability",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Design useful logs, metrics and traces and connect telemetry to user-visible outcomes."
+  },
+  {
+    "name": "SLIs, SLOs and error budgets",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Define reliability from the user's perspective and use error budgets and burn-rate signals to balance reliability and delivery."
+  },
+  {
+    "name": "Incident response and blameless postmortems",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Mitigate incidents systematically, communicate clearly and turn contributing factors into durable improvements."
+  },
+  {
+    "name": "Graceful degradation",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Preserve critical functionality during overload or dependency failure using fallbacks and load shedding."
+  },
+  {
+    "name": "Capacity planning",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Estimate throughput, concurrency, storage and saturation points and validate assumptions against production behavior."
+  },
+  {
+    "name": "Load and performance testing",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Model representative workloads and interpret latency percentiles, throughput, errors and saturation."
+  },
+  {
+    "name": "Secure-by-design development",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Treat authentication, authorization, secrets, validation, encryption and dependency risk as design concerns."
+  },
+  {
+    "name": "Threat modeling",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Identify assets, trust boundaries, threats and mitigations during system design."
+  },
+  {
+    "name": "Architecture Decision Records",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Record consequential architectural decisions, context, alternatives and trade-offs."
+  },
+  {
+    "name": "Modular monolith",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Prefer strong internal boundaries without distributed-systems overhead when independent deployment is not justified."
+  },
+  {
+    "name": "Microservices",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand service boundaries, independent deployment, data ownership and operational costs; use them when constraints justify them."
+  },
+  {
+    "name": "API gateway pattern",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand routing, authentication, policy enforcement, rate limiting and aggregation at service boundaries."
+  },
+  {
+    "name": "Service discovery",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand dynamic endpoint discovery, health and DNS or registry-based service location."
+  },
+  {
+    "name": "DORA metrics",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Use delivery and stability measures as system-level feedback rather than simplistic individual productivity scores."
+  },
+  {
+    "name": "Trunk-based development",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Keep integration continuous through small changes, short-lived branches, automated tests and feature controls."
+  },
+  {
+    "name": "Feature flags",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Decouple deployment from release, support progressive rollout and remove stale flags."
+  },
+  {
+    "name": "AI-assisted software engineering",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Use coding agents for investigation and implementation while retaining human ownership of architecture, verification and production outcomes."
+  },
+  {
+    "name": "Repository instructions for coding agents",
+    "ring": "adopt",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Maintain concise repository instructions such as AGENTS.md covering architecture, testing, conventions and constraints."
+  },
+  {
+    "name": "Zero trust architecture",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand identity-centric security, least privilege and continuous verification across service boundaries."
+  },
+  {
+    "name": "Transactional Outbox",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Practice solving the database-and-message dual-write problem with a durable outbox and idempotent consumers."
+  },
+  {
+    "name": "Saga pattern",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Coordinate multi-service transactions with local transactions and compensations; compare orchestration and choreography."
+  },
+  {
+    "name": "Change Data Capture",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand log-based data-change propagation and when CDC is preferable to application publishing or polling."
+  },
+  {
+    "name": "Event schema evolution",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Evolve asynchronous contracts safely using compatibility rules, tolerant consumers and controlled migrations."
+  },
+  {
+    "name": "Workflow orchestration",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Model long-running failure-prone business processes durably and compare workflow engines with queues and state machines."
+  },
+  {
+    "name": "Domain-driven design",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Use bounded contexts and ubiquitous language to manage complex domains without turning patterns into ceremony."
+  },
+  {
+    "name": "Evolutionary architecture",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Design architectures that can change incrementally and protect important characteristics with feedback."
+  },
+  {
+    "name": "Strangler Fig migration",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Modernize systems incrementally by routing functionality from legacy components to new implementations."
+  },
+  {
+    "name": "Progressive delivery",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Use canary and phased rollouts with observability and rollback criteria to reduce change risk."
+  },
+  {
+    "name": "Cost-aware architecture / FinOps",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Include compute, storage, network and managed-service economics in architecture decisions."
+  },
+  {
+    "name": "Context engineering",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Curate instructions, retrieved knowledge, tools and context boundaries for effective AI-assisted engineering."
+  },
+  {
+    "name": "Agent Skills",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Experiment with modular reusable agent capabilities and distinguish them from repository instructions and prompts."
+  },
+  {
+    "name": "Agent evaluation and verification",
+    "ring": "trial",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Evaluate nondeterministic agent behavior with repeatable tasks, tests, traces and human review."
+  },
+  {
+    "name": "CQRS",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand separating command and query models and the consistency and operational complexity it introduces."
+  },
+  {
+    "name": "Event sourcing",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "FALSE",
+    "description": "Understand event logs as source of truth, projections, replay and snapshots without treating the pattern as a default."
+  },
+  {
+    "name": "Consensus and Raft",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand quorum, leader election, terms, replicated logs and network partitions."
+  },
+  {
+    "name": "Logical clocks and causal ordering",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand Lamport and vector-clock concepts and why wall-clock timestamps cannot establish causality."
+  },
+  {
+    "name": "CRDTs",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand convergent replicated data structures and coordination-free conflict resolution."
+  },
+  {
+    "name": "Distributed locking",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand leases, fencing tokens and why naive distributed locks can violate correctness."
+  },
+  {
+    "name": "Chaos engineering",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Use controlled failure injection to validate resilience hypotheses after foundational reliability practices are established."
+  },
+  {
+    "name": "Platform engineering",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand internal developer platforms, paved roads and self-service capabilities."
+  },
+  {
+    "name": "RAG architecture",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand retrieval, chunking, embeddings, ranking, permissions, grounding and evaluation."
+  },
+  {
+    "name": "Model Context Protocol (MCP)",
+    "ring": "assess",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Understand MCP interoperability and trust boundaries while recognizing when direct APIs or CLIs are simpler."
+  },
+  {
+    "name": "Service mesh by default",
+    "ring": "Caution",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Do not introduce a service mesh without concrete traffic policy, identity or observability needs that justify its operational cost."
+  },
+  {
+    "name": "Premature microservice decomposition",
+    "ring": "Caution",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Avoid independently deployed services before boundaries, scaling needs or ownership justify distributed-systems complexity."
+  },
+  {
+    "name": "Exactly-once assumptions",
+    "ring": "Caution",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Avoid designing correctness around simplistic exactly-once claims; model retries, duplicates and side effects explicitly."
+  },
+  {
+    "name": "Unbounded retries and queues",
+    "ring": "Caution",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Avoid retry loops and queues without explicit limits, backpressure, expiry and failure handling."
+  },
+  {
+    "name": "Coding throughput as productivity",
+    "ring": "Caution",
+    "quadrant": "techniques",
+    "isNew": "TRUE",
+    "description": "Do not equate lines of code, commits or AI-generated volume with engineering productivity."
+  },
+  {
+    "name": "Linux",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Understand processes, signals, filesystems, permissions, networking, resource limits and common production diagnostics."
+  },
+  {
+    "name": "Containers",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Understand images, layers, namespaces, cgroups, networking, registries and container lifecycle."
+  },
+  {
+    "name": "Kubernetes",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Be production-confident with workloads, probes, requests and limits, autoscaling, networking, rollouts and failure diagnosis."
+  },
+  {
+    "name": "Google Cloud Platform",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Understand IAM, networking, compute, managed data services, messaging, observability, quotas and cost."
+  },
+  {
+    "name": "PostgreSQL",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Know planner and statistics, indexing, MVCC, VACUUM, WAL, locks, replication, partitioning and connection management."
+  },
+  {
+    "name": "Redis",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Understand caching, data structures, persistence, eviction, replication, clustering, hot keys and failure modes."
+  },
+  {
+    "name": "GCP Pub/Sub",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Understand delivery semantics, ordering, retries, dead-letter topics, flow control, scaling, quotas and monitoring."
+  },
+  {
+    "name": "Object storage",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand S3/GCS-style storage semantics, lifecycle, multipart transfer, signed access and architecture use cases."
+  },
+  {
+    "name": "Managed relational databases",
+    "ring": "adopt",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand backups, PITR, replicas, failover, maintenance, connection limits and managed-service trade-offs."
+  },
+  {
+    "name": "Apache Kafka",
+    "ring": "trial",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Gain hands-on experience with partitions, consumer groups, offsets, ordering, retention, rebalancing and operations."
+  },
+  {
+    "name": "BigQuery",
+    "ring": "trial",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Understand analytical modeling, partitioning, clustering, query cost and OLAP versus OLTP boundaries."
+  },
+  {
+    "name": "ClickHouse",
+    "ring": "trial",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Gain experience with columnar OLAP workloads and compare it with PostgreSQL and warehouse systems."
+  },
+  {
+    "name": "Cassandra / Dynamo-style databases",
+    "ring": "trial",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand partition keys, consistent hashing, quorum behavior, LSM storage, compaction and eventual consistency."
+  },
+  {
+    "name": "Temporal",
+    "ring": "trial",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Explore durable workflow execution and compare it with queues, sagas and hand-built state machines."
+  },
+  {
+    "name": "Content delivery networks",
+    "ring": "trial",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand edge caching, cache keys, invalidation, origin protection and latency/cost trade-offs."
+  },
+  {
+    "name": "Elasticsearch / OpenSearch",
+    "ring": "trial",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand inverted indexes, mappings, shards, replicas and search workloads without using it as a default transactional store."
+  },
+  {
+    "name": "Apache Iceberg",
+    "ring": "assess",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand analytical table formats, snapshots, schema evolution and lakehouse architecture."
+  },
+  {
+    "name": "Vector databases",
+    "ring": "assess",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand vector indexing, similarity retrieval, metadata filtering and semantic-search/RAG trade-offs."
+  },
+  {
+    "name": "Service mesh",
+    "ring": "assess",
+    "quadrant": "platforms",
+    "isNew": "FALSE",
+    "description": "Understand mTLS, traffic policy and telemetry benefits versus infrastructure and debugging complexity."
+  },
+  {
+    "name": "AWS",
+    "ring": "assess",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Maintain cloud-portable literacy across compute, IAM, networking, storage, messaging and databases."
+  },
+  {
+    "name": "Cloudflare",
+    "ring": "assess",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand edge compute, CDN, DNS, security and globally distributed application capabilities."
+  },
+  {
+    "name": "Serverless platforms",
+    "ring": "assess",
+    "quadrant": "platforms",
+    "isNew": "TRUE",
+    "description": "Understand event-driven execution, scaling, cold starts, limits and cost models."
+  },
+  {
+    "name": "Git",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "FALSE",
+    "description": "Use branching, rebasing, bisect, reflog and history investigation confidently and understand Git's object model."
+  },
+  {
+    "name": "Docker",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "FALSE",
+    "description": "Build secure, minimal and reproducible images and diagnose container build and runtime problems."
+  },
+  {
+    "name": "OpenTelemetry",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "FALSE",
+    "description": "Instrument vendor-neutral telemetry and understand context propagation, sampling, semantic conventions and collectors."
+  },
+  {
+    "name": "Prometheus",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Understand metric types, labels and cardinality, PromQL, recording rules and alerting."
+  },
+  {
+    "name": "Grafana",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "FALSE",
+    "description": "Create diagnostic dashboards around service health, SLOs and business-relevant signals."
+  },
+  {
+    "name": "Go pprof",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Diagnose CPU, heap, allocation, goroutine, mutex and blocking problems in Go services."
+  },
+  {
+    "name": "EXPLAIN / EXPLAIN ANALYZE",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "FALSE",
+    "description": "Read PostgreSQL plans and connect estimates, scans, joins, buffers and statistics to query performance."
+  },
+  {
+    "name": "Terraform / OpenTofu",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Understand infrastructure modules, state, plans, drift, lifecycle and safe deployment workflows."
+  },
+  {
+    "name": "GitHub Actions",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Design CI/CD workflows with caching, artifacts, environments, security boundaries and deployment gates."
+  },
+  {
+    "name": "Static analysis and linters",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Use automated analysis to catch correctness, security and maintainability issues early."
+  },
+  {
+    "name": "Dependency and vulnerability scanning",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Identify vulnerable dependencies, leaked secrets and risky artifacts and maintain a remediation process."
+  },
+  {
+    "name": "Database migration tools",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Use versioned schema migrations safely and understand expand-contract changes, compatibility, locking and rollback limitations."
+  },
+  {
+    "name": "Coding agents",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Use coding agents for repository investigation, implementation and verification without outsourcing engineering judgment."
+  },
+  {
+    "name": "Make / task runners",
+    "ring": "adopt",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Provide predictable build, test, lint, generation and local workflows."
+  },
+  {
+    "name": "Go execution tracer",
+    "ring": "trial",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Investigate scheduler, goroutine, GC and latency behavior when profiles are insufficient."
+  },
+  {
+    "name": "Helm",
+    "ring": "trial",
+    "quadrant": "tools",
+    "isNew": "FALSE",
+    "description": "Maintain Kubernetes application packaging while recognizing templating complexity and alternatives."
+  },
+  {
+    "name": "k6",
+    "ring": "trial",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Create repeatable load tests and interpret latency, throughput, errors and saturation."
+  },
+  {
+    "name": "Delve",
+    "ring": "trial",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Debug Go processes and tests using breakpoints, goroutine inspection and runtime state."
+  },
+  {
+    "name": "Local Kubernetes environments",
+    "ring": "trial",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Use local clusters such as kind or minikube to reproduce Kubernetes behavior."
+  },
+  {
+    "name": "Dev Containers",
+    "ring": "trial",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Create reproducible development environments for onboarding, CI parity and sandboxed agent execution."
+  },
+  {
+    "name": "eBPF observability tools",
+    "ring": "assess",
+    "quadrant": "tools",
+    "isNew": "TRUE",
+    "description": "Understand low-overhead kernel and network observability and when eBPF helps production diagnosis."
+  },
+  {
+    "name": "Go",
+    "ring": "adopt",
+    "quadrant": "languages & frameworks",
+    "isNew": "FALSE",
+    "description": "Go beyond syntax into scheduler behavior, goroutines, channels, memory, GC, escape analysis, networking, profiling and API design."
+  },
+  {
+    "name": "SQL",
+    "ring": "adopt",
+    "quadrant": "languages & frameworks",
+    "isNew": "FALSE",
+    "description": "Treat SQL as a core engineering language including joins, windows, CTEs, aggregation, locking and plan implications."
+  },
+  {
+    "name": "HTTP",
+    "ring": "adopt",
+    "quadrant": "languages & frameworks",
+    "isNew": "FALSE",
+    "description": "Understand methods, status codes, headers, caching, conditional requests and HTTP/1.1, HTTP/2 and HTTP/3 trade-offs."
+  },
+  {
+    "name": "gRPC",
+    "ring": "adopt",
+    "quadrant": "languages & frameworks",
+    "isNew": "FALSE",
+    "description": "Design RPC services with deadlines, cancellation, streaming, interceptors, status semantics and observability."
+  },
+  {
+    "name": "Protocol Buffers",
+    "ring": "adopt",
+    "quadrant": "languages & frameworks",
+    "isNew": "FALSE",
+    "description": "Evolve typed schemas safely using field-number discipline and compatibility rules."
+  },
+  {
+    "name": "OpenAPI",
+    "ring": "adopt",
+    "quadrant": "languages & frameworks",
+    "isNew": "FALSE",
+    "description": "Use machine-readable HTTP API contracts for documentation, validation, compatibility and generation."
+  },
+  {
+    "name": "Regular expressions",
+    "ring": "adopt",
+    "quadrant": "languages & frameworks",
+    "isNew": "TRUE",
+    "description": "Use regex safely while understanding readability, performance and ReDoS risks."
+  },
+  {
+    "name": "Bash / shell scripting",
+    "ring": "adopt",
+    "quadrant": "languages & frameworks",
+    "isNew": "TRUE",
+    "description": "Automate tasks safely with quoting, pipes, exit handling and portable command composition."
+  },
+  {
+    "name": "JSON Schema",
+    "ring": "trial",
+    "quadrant": "languages & frameworks",
+    "isNew": "TRUE",
+    "description": "Use machine-readable validation for JSON payloads and configuration and understand schema evolution."
+  },
+  {
+    "name": "Python",
+    "ring": "assess",
+    "quadrant": "languages & frameworks",
+    "isNew": "TRUE",
+    "description": "Maintain enough Python literacy for automation, data and AI tooling and cross-team collaboration."
+  },
+  {
+    "name": "WebAssembly",
+    "ring": "assess",
+    "quadrant": "languages & frameworks",
+    "isNew": "TRUE",
+    "description": "Understand sandboxed portable execution and emerging server-side and plugin use cases."
+  }
+]
