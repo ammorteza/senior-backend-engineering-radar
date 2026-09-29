@@ -1,5 +1,9 @@
 # Senior Backend Engineering Radar
 
+## 🌐 Live Radar
+
+**https://ammorteza.github.io/senior-backend-engineering-radar/**
+
 A public, opinionated learning radar for senior backend engineers growing toward Staff-level systems and architecture depth.
 
 The interactive site is generated with **AOE Technology Radar**. Each blip lives as Markdown under `radar/<release-date>/`, allowing richer explanations and revision history over time.
