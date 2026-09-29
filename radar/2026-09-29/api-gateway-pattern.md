@@ -1,0 +1,8 @@
+---
+title: "API gateway pattern"
+ring: adopt
+quadrant: techniques
+tags: [backend]
+---
+
+Understand routing, authentication, policy enforcement, rate limiting and aggregation at service boundaries.

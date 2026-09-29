@@ -1,10 +1,8 @@
 # Senior Backend Engineering Radar
 
-An opinionated, public learning radar for senior backend engineers.
+A public, opinionated learning radar for senior backend engineers growing toward Staff-level systems and architecture depth.
 
-> What should a senior backend engineer be able to use deeply, practice next, understand architecturally, or deliberately avoid?
-
-This project is compatible with Thoughtworks **Build Your Own Radar (BYOR)**.
+The interactive site is generated with **AOE Technology Radar**. Each blip lives as Markdown under `radar/<release-date>/`, allowing richer explanations and revision history over time.
 
 ## Quadrants
 
@@ -15,10 +13,10 @@ This project is compatible with Thoughtworks **Build Your Own Radar (BYOR)**.
 
 ## Rings
 
-- **Adopt** — production-level competency is expected or strongly recommended. Apply it, reason about trade-offs and diagnose failures.
-- **Trial** — gain hands-on experience before deciding whether it belongs in your regular toolkit.
-- **Assess** — understand the problem, architecture, failure modes and trade-offs; hands-on expertise is optional until needed.
-- **Hold** — a deliberate caution: do not make this a default choice without a concrete reason.
+- **Adopt** — production-level competency is expected or strongly recommended.
+- **Trial** — gain hands-on experience.
+- **Assess** — understand the problem, architecture, failure modes and trade-offs.
+- **Caution** — do not make this a default choice without a concrete reason.
 
 ## 20-minute daily routine
 
@@ -27,33 +25,22 @@ This project is compatible with Thoughtworks **Build Your Own Radar (BYOR)**.
 3. **5 min — Trade-offs:** When should you not use it? What are the alternatives?
 4. **5 min — Apply it:** Explain a production scenario, failure mode or design decision involving it.
 
-Large domains such as PostgreSQL, Kubernetes and distributed systems are intentionally revisited at progressively deeper layers.
+## Run locally
 
-## Suggested learning order
-
-Start with **Adopt / Techniques**, then Adopt items in Platforms, Tools and Languages. Move into Trial items related to your current work, and use Assess for architectural breadth. Hold items are design cautions rather than a study backlog.
-
-## Build the radar
-
-The source is [`radar.csv`](./radar.csv) and follows the BYOR schema:
-
-```
-name,ring,quadrant,isNew,description
+```bash
+npm install
+npm run dev
 ```
 
-Use this raw CSV URL with Thoughtworks Build Your Own Radar:
+## Data
 
-```
-https://raw.githubusercontent.com/ammorteza/senior-backend-engineering-radar/master/radar.csv
-```
+AOE-native entries are under `radar/`. `radar.csv` and `radar.json` remain as portable exports.
 
-## Scope
+## GitHub Pages
 
-This radar targets engineers responsible for production backend systems and Senior-to-Staff growth. It emphasizes durable systems knowledge: distributed systems, databases, networking and protocols, reliability, security, cloud/platform engineering and operational excellence.
+The deployment workflow builds `build/` and publishes it to GitHub Pages. Expected URL:
 
-AI-assisted engineering, agent skills, RAG and MCP are included where backend engineers increasingly need architectural literacy, but they do not replace core systems knowledge.
-
-This is a learning map, not a certification checklist. Company, domain and system context always matter.
+`https://ammorteza.github.io/senior-backend-engineering-radar/`
 
 ## Contributing
 

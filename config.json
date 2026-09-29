@@ -1,0 +1,129 @@
+{
+  "basePath": "/senior-backend-engineering-radar",
+  "baseUrl": "https://ammorteza.github.io/senior-backend-engineering-radar",
+  "editUrl": "https://github.com/ammorteza/senior-backend-engineering-radar/edit/master/radar/{release}/{id}.md",
+  "toggles": {
+    "showChart": true,
+    "showTagFilter": true,
+    "showSegmentList": true,
+    "showEmptyRings": false
+  },
+  "sections": [
+    "radar",
+    "tags",
+    "list"
+  ],
+  "colors": {
+    "foreground": "#ffffff",
+    "background": "#173d7a",
+    "highlight": "#029df7",
+    "content": "#ffffff",
+    "text": "#575757",
+    "link": "#029df7",
+    "border": "rgba(255,255,255,0.1)",
+    "tag": "rgba(255,255,255,0.1)"
+  },
+  "segments": [
+    {
+      "id": "techniques",
+      "title": "Techniques",
+      "description": "Distributed systems, architecture, reliability, security, data design, delivery and AI-assisted engineering.",
+      "label": "Quadrant 1",
+      "color": "#248EA6"
+    },
+    {
+      "id": "platforms",
+      "title": "Platforms",
+      "description": "Runtime, cloud, databases, messaging, orchestration and data platforms.",
+      "label": "Quadrant 2",
+      "color": "#F25244"
+    },
+    {
+      "id": "tools",
+      "title": "Tools",
+      "description": "Observability, infrastructure, CI/CD, profiling, testing, debugging and engineering productivity.",
+      "label": "Quadrant 3",
+      "color": "#F2A25C"
+    },
+    {
+      "id": "languages-and-frameworks",
+      "title": "Languages & Frameworks",
+      "description": "Languages, protocols, schemas and core backend ecosystems.",
+      "label": "Quadrant 4",
+      "color": "#84BFA4"
+    }
+  ],
+  "rings": [
+    {
+      "id": "adopt",
+      "title": "Adopt",
+      "description": "Production-level competency is expected or strongly recommended.",
+      "color": "#5cb449",
+      "radius": 0.5,
+      "strokeWidth": 5
+    },
+    {
+      "id": "trial",
+      "title": "Trial",
+      "description": "Gain hands-on experience before deciding whether it belongs in your regular toolkit.",
+      "color": "#faa03d",
+      "radius": 0.69,
+      "strokeWidth": 3
+    },
+    {
+      "id": "assess",
+      "title": "Assess",
+      "description": "Understand the problem, architecture, failure modes and trade-offs; hands-on expertise is optional until needed.",
+      "color": "#029df7",
+      "radius": 0.85,
+      "strokeWidth": 2
+    },
+    {
+      "id": "caution",
+      "title": "Caution",
+      "description": "Do not make this a default choice without a concrete reason.",
+      "color": "#688190",
+      "radius": 1,
+      "strokeWidth": 0.75
+    }
+  ],
+  "flags": {
+    "new": {
+      "color": "#f1235a",
+      "title": "New",
+      "titleShort": "N",
+      "description": "New in this version"
+    },
+    "changed": {
+      "color": "#40a7d1",
+      "title": "Changed",
+      "titleShort": "C",
+      "description": "Recently changed"
+    },
+    "default": {
+      "description": "Unchanged"
+    }
+  },
+  "chart": {
+    "size": 1000,
+    "blipSize": 11
+  },
+  "social": [
+    {
+      "href": "https://github.com/ammorteza/senior-backend-engineering-radar",
+      "icon": "github"
+    }
+  ],
+  "labels": {
+    "title": "Senior Backend Engineering Radar",
+    "quadrant": "Quadrant",
+    "quadrantOverview": "Quadrant Overview",
+    "zoomIn": "Zoom in",
+    "filterByTag": "Filter by Tag",
+    "pageAbout": "About this radar",
+    "pageOverview": "Radar Overview",
+    "pageSearch": "Search",
+    "searchPlaceholder": "Search backend engineering topics...",
+    "metaDescription": "A public learning radar for senior backend engineers growing toward Staff-level systems and architecture depth."
+  }
+}
