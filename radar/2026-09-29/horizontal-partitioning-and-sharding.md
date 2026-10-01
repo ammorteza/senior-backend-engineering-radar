@@ -7,87 +7,57 @@ tags: [backend]
 
 ## What it is
 
-**Horizontal partitioning and sharding** is a engineering technique in the backend-engineering landscape. Understand shard-key selection, hotspots, resharding, fan-out queries and routing. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Sharding splits a logical dataset horizontally so different rows or keys live on different database nodes. A shard key determines placement—for example `customer_id`, `tenant_id` or a hash of an identifier.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Horizontal partitioning and sharding matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Horizontal partitioning and sharding?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Sharding can move a system beyond the storage, write throughput or working-set limits of one database. It also removes many conveniences of a single database: global transactions, joins, uniqueness and simple queries.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Horizontal partitioning and sharding, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Horizontal partitioning and sharding, the core mechanism is captured by this working definition: Understand shard-key selection, hotspots, resharding, fan-out queries and routing. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+A routing layer maps each shard key to a shard. Hash-based sharding distributes keys relatively evenly; range sharding preserves locality but can create hot ranges. Consistent hashing or virtual shards reduce data movement during rebalancing. Resharding requires moving ownership while reads and writes continue, which is usually harder than the initial partitioning.
 
 ## Key concepts
 
-### Data model and access path
-Understand what is being protected or optimized and which business or technical invariant must remain true.
+### Shard key
+The key should align with access patterns and distribute load, not merely rows.
 
-### Consistency and concurrency
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
+### Hot shards
+One celebrity user, large tenant or time range can dominate traffic despite an even row count.
 
-### Storage and indexing
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
+### Scatter-gather
+Queries without a shard key may fan out to every shard, increasing latency and cost.
 
-### Replication, recovery and durability
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
+### Resharding
+Capacity growth eventually requires moving partitions safely while serving traffic.
 
-### Capacity and operational behavior
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+### Global invariants
+Cross-shard uniqueness, transactions and foreign keys require different designs or explicit coordination.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Horizontal partitioning and sharding because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Horizontal partitioning and sharding adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A multi-tenant platform shards by `tenant_id`. Most requests stay on one shard and tenant data is easy to move. One enterprise tenant grows to 30% of traffic and becomes a hot shard. The team introduces virtual partitions for large tenants rather than assuming the original key will scale forever.
 
 ## Trade-offs
 
-Horizontal partitioning and sharding should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Sharding increases write/storage capacity and fault isolation, but complicates queries, migrations, operations and correctness. Replication scales copies of the same data; sharding divides the data itself. They solve different bottlenecks and are often combined.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Horizontal partitioning and sharding from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Poor shard keys create hotspots. Sequential ranges can overload the newest shard. Cross-shard queries become hidden fan-out. Rebalancing without versioned ownership can produce double writes or missed writes.
 
 ## When to use it
 
-Use Horizontal partitioning and sharding when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Shard when measurements show a single database is approaching a hard capacity boundary that cannot reasonably be solved with indexing, query design, vertical scaling, replicas or archiving.
 
 ## When not to use it
 
-Do not use Horizontal partitioning and sharding solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not shard preemptively. A well-operated relational database can carry substantial workloads, and premature sharding permanently raises application complexity.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Horizontal partitioning and sharding without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: data model and access path, consistency and concurrency, storage and indexing, replication, recovery and durability, capacity and operational behavior.
+A Senior Engineer should evaluate shard keys, hotspots, routing, fan-out, rebalancing and cross-shard operations and understand how the application behaves when one shard fails.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Horizontal partitioning and sharding belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
-
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Horizontal partitioning and sharding to business invariants, system architecture, organizational structure and long-term operational cost.
+A Staff Engineer should identify the actual scaling boundary, choose ownership and migration strategy, design for large tenants and future resharding, and account for the organizational cost of operating many databases.

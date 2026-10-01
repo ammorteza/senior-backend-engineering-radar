@@ -7,87 +7,57 @@ tags: [backend]
 
 ## What it is
 
-**Delivery semantics** is a engineering technique in the backend-engineering landscape. Understand at-most-once, at-least-once and effectively-once processing and design consumers for duplicates and failures. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Delivery semantics describe what a messaging system and application can guarantee about processing a message when failures occur. The familiar labels are at-most-once, at-least-once and exactly-once, but the useful question is always: exactly once **where**, and for which side effect?
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Delivery semantics matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Delivery semantics?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+A worker can finish its database write and crash before acknowledging the message. The broker then redelivers it. That single failure explains why duplicate-safe processing matters more than marketing claims about exactly-once delivery.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Delivery semantics, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Delivery semantics, the core mechanism is captured by this working definition: Understand at-most-once, at-least-once and effectively-once processing and design consumers for duplicates and failures. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+With at-most-once delivery, a message is considered consumed before or without a durable confirmation of processing; failures can lose work. With at-least-once, acknowledgement happens after processing, so ambiguous failures cause redelivery. Broker-level exactly-once mechanisms can atomically coordinate selected broker operations, but usually cannot atomically include an arbitrary HTTP API, email provider or unrelated database.
 
 ## Key concepts
 
-### Ordering and partitioning
-Understand what is being protected or optimized and which business or technical invariant must remain true.
+### Acknowledgement
+The point at which the broker may stop redelivering a message.
 
-### Delivery, acknowledgement and replay
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
+### Redelivery
+A message is intentionally delivered again when processing success is uncertain.
 
-### Consumer state and idempotency
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
+### Idempotency
+Consumers make repeated attempts produce one logical effect.
 
-### Backpressure and failure handling
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
+### Processing boundary
+A guarantee is meaningful only when its transactional boundary is named.
 
-### Schema and contract evolution
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+### Poison messages
+Messages that repeatedly fail need bounded retry and quarantine rather than infinite redelivery.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Delivery semantics because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Delivery semantics adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A payment consumer writes `payment_status=charged` and crashes before acknowledging. The broker redelivers. If the consumer calls the payment provider again without an idempotency key, the customer can be charged twice. At-least-once delivery plus end-to-end idempotency is safer than pretending the broker alone can provide exactly-once charging.
 
 ## Trade-offs
 
-Delivery semantics should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+At-most-once is simple but accepts loss. At-least-once protects against loss but moves duplicate handling to consumers. Stronger transactional mechanisms reduce some ambiguity while increasing coordination, coupling and operational constraints.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Delivery semantics from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+The classic mistake is equating exactly-once message delivery with exactly-once business effects. Other failures include acknowledging too early, unbounded redelivery, non-idempotent external calls and deduplication records that are not committed atomically with state changes.
 
 ## When to use it
 
-Use Delivery semantics when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Choose semantics from business consequences. At-least-once is a strong default for durable business work when consumers can be idempotent.
 
 ## When not to use it
 
-Do not use Delivery semantics solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not pay for complex exactly-once mechanisms when duplicate-safe processing already provides the required business guarantee.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Delivery semantics without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: ordering and partitioning, delivery, acknowledgement and replay, consumer state and idempotency, backpressure and failure handling, schema and contract evolution.
+A Senior Engineer should be able to draw the crash windows around processing and acknowledgement and explain what happens in each one. They should design idempotency, retries and DLQ behavior accordingly.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Delivery semantics belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
-
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Delivery semantics to business invariants, system architecture, organizational structure and long-term operational cost.
+A Staff Engineer should define end-to-end business guarantees across brokers, databases and external systems, and challenge vague “exactly once” claims that omit their transactional boundary.

@@ -7,87 +7,57 @@ tags: [backend]
 
 ## What it is
 
-**Observability** is a engineering technique in the backend-engineering landscape. Design useful logs, metrics and traces and connect telemetry to user-visible outcomes. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Observability is the ability to understand a system's internal behavior from the signals it emits. In backend systems those signals usually include metrics, logs and traces, but collecting all three does not automatically make a system observable.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Observability matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Observability?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Production failures rarely reproduce exactly in development. Engineers need to answer concrete questions—Which endpoint is slow? Which dependency dominates latency? Is one tenant causing load? Did the new release increase errors?—without adding new instrumentation after the incident starts.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Observability, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Observability, the core mechanism is captured by this working definition: Design useful logs, metrics and traces and connect telemetry to user-visible outcomes. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Applications emit structured telemetry with consistent service identity and request context. Metrics aggregate numeric behavior, logs preserve discrete events, and traces connect work across service boundaries. Dashboards and alerts should begin from user-visible symptoms, then support drilling down into causes.
 
 ## Key concepts
 
-### Signals and instrumentation
-Understand what is being protected or optimized and which business or technical invariant must remain true.
+### Metrics
+Counters, gauges and histograms efficiently describe rates, saturation and latency distributions.
 
-### Cardinality and context
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
+### Structured logs
+Machine-queryable fields are more useful than free-form strings for high-volume systems.
 
-### Detection and diagnosis
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
+### Distributed traces
+Trace/span IDs connect one request across RPC, messaging and storage boundaries.
 
-### Failure experiments and recovery
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
+### Cardinality
+Dimensions such as user ID can create enormous metric series and cost; high-cardinality context often belongs in traces or logs.
 
-### User-visible reliability
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+### RED and USE
+Request rate/errors/duration and resource utilization/saturation/errors are useful starting frameworks, not mandatory dashboards.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Observability because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Observability adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+Order-service p95 rises from 80 ms to 1.5 s while pod CPU and memory remain normal. A trace shows most time in PostgreSQL. Database metrics show CPU saturation and increased connections; query telemetry identifies the changed endpoint. Observability narrows the fault domain before engineers start changing application replicas blindly.
 
 ## Trade-offs
 
-Observability should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+More telemetry improves diagnostic power but costs CPU, network, storage and human attention. Sampling reduces trace cost but can hide rare failures. Logging every payload can create privacy and security problems.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Observability from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Dashboards without actionable questions, alerts on CPU rather than user impact, missing correlation IDs, unbounded label cardinality, secrets in logs and instrumentation that disappears on error paths are recurring problems.
 
 ## When to use it
 
-Use Observability when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Every production backend needs a baseline of metrics, structured logs and enough tracing/context to follow critical flows. Depth should match system criticality and complexity.
 
 ## When not to use it
 
-Do not use Observability solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not collect telemetry merely because a tool supports it. A signal without an operational question, owner or retention rationale is mostly cost.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Observability without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: signals and instrumentation, cardinality and context, detection and diagnosis, failure experiments and recovery, user-visible reliability.
+A Senior Engineer should instrument critical paths, choose useful metrics, preserve trace context, control cardinality and debug from symptoms through dependencies using telemetry rather than guesses.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Observability belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
-
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Observability to business invariants, system architecture, organizational structure and long-term operational cost.
+A Staff Engineer should define organization-wide telemetry conventions, connect observability to SLOs and incident response, manage cost/privacy, and make cross-service diagnosis possible without forcing every team into identical dashboards.
