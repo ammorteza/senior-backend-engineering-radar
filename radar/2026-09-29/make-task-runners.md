@@ -7,87 +7,118 @@ tags: [backend]
 
 ## What it is
 
-**Make / task runners** is a tool in the backend-engineering landscape. Provide predictable build, test, lint, generation and local workflows. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
+A **task runner** gives a repository a small, documented interface for common engineering operations: build the service, run tests, lint code, generate files, start dependencies, or build a container.
 
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+GNU Make is the classic example. A Makefile defines **targets**, their prerequisites, and shell recipes. Modern alternatives such as Task and Just make different trade-offs, but the goal is similar: developers and CI invoke a stable project command instead of memorizing implementation-specific shell commands.
+
+For a Go repository, commands such as `make test`, `make lint`, and `make generate` can remain stable even when the tools behind them change.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Make / task runners matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
+Repositories accumulate operational knowledge quickly. One engineer remembers that integration tests require containers; another knows mocks must be regenerated; CI runs a slightly different linter command; the README becomes outdated.
 
-A useful engineering question is therefore not “Do we use Make / task runners?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+A task runner turns that knowledge into **executable documentation**.
+
+The main benefit is workflow consistency, not sophisticated build logic. A new engineer should be able to clone a repository, inspect a short list of targets, and perform the same important operations CI performs.
+
+This is useful for coding agents too: explicit test, lint and build entry points provide a predictable verification path.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Make / task runners, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
+In Make, a target declares prerequisites and a recipe. Conceptually:
 
-For Make / task runners, the core mechanism is captured by this working definition: Provide predictable build, test, lint, generation and local workflows. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
+```text
+target: prerequisites
+    command
+```
 
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Running a target asks Make to ensure its prerequisites are up to date and then execute the recipe when necessary.
+
+Make was designed as a build system. For file targets it compares modification timestamps and rebuilds an artifact when one of its prerequisites is newer. Application repositories often use only a simpler subset of Make as a command dispatcher.
+
+Other task runners focus more directly on named commands, task dependencies, variables and cross-platform execution instead of Make's file/timestamp semantics.
 
 ## Key concepts
 
-### Problem and invariant
-Understand what is being protected or optimized and which business or technical invariant must remain true.
+### Targets and recipes
+A target names an operation or artifact; its recipe contains the commands required to produce it. Keep names unsurprising: test should test, lint should lint.
 
-### State and ownership
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
+### Dependencies
+Targets can depend on other targets. A verify target might compose generate, lint and test, creating one canonical pre-merge workflow without duplicating commands.
 
-### Concurrency and failure
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
+### Phony targets
+Commands such as test, clean and lint do not represent files. In Make they should normally be declared `.PHONY`, otherwise a same-named file can cause Make to think the target is already up to date.
 
-### Operational feedback
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
+### Variables
+Variables centralize tool paths and flags, but excessive Make metaprogramming quickly becomes harder to understand than the commands it replaced.
 
-### Evolution and maintainability
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+### Shell semantics
+Recipes ultimately execute shell commands. Quoting, environment variables, pipes, exit codes and working directories matter. Separate recipe lines can also execute in separate shells, which surprises engineers expecting state such as `cd` to carry automatically.
+
+### Reproducibility
+A stable target name does not guarantee a reproducible workflow. Tool versions and environment assumptions must also be controlled. If every laptop runs a different linter version, `make lint` is only superficially consistent.
+
+### Local/CI parity
+CI should invoke the same repository-level commands developers use locally where practical. Then changing the test implementation requires one change rather than synchronized changes to CI, documentation and developer instructions.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Make / task runners because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
+A Go service has four commands in its README that developers should run before opening a pull request. CI evolved separately and now passes different build tags. Generated Protobuf files are occasionally forgotten, so developers see failures they cannot reproduce locally.
 
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
+The team exposes six repository tasks: bootstrap, generate, test, lint, verify and build. Verify composes the checks expected before merge, and CI calls the same verify task. Bootstrap installs or validates pinned development tools.
 
-The change is expanded only when the measured result supports the original requirement. If Make / task runners adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+Six months later the team replaces its linter. Developers still run the same lint task; only its implementation changes.
+
+The task runner has created a stable interface around an evolving toolchain.
 
 ## Trade-offs
 
-Make / task runners should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
+The upside is discoverability and consistency. Short commands reduce onboarding friction, align CI with local development, and give automation a predictable entry point.
 
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+The downside appears when the task file grows into an opaque build system. Complex conditionals, nested shell scripts and platform-specific tricks can make a Makefile harder to maintain than the commands it replaced.
+
+Make is ubiquitous on Unix-like systems and excellent at dependency-oriented builds, but its syntax has historical quirks. A simpler runner such as Just or Task may be easier when the repository only needs command orchestration.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Make / task runners from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
+**CI bypasses the task runner.** Local success then stops predicting CI success.
 
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
+**Unpinned tools.** A stable target invoking unstable tool versions is not reproducible.
 
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+**Hidden side effects.** A harmless-sounding target should not silently publish artifacts, delete data or modify cloud infrastructure.
+
+**Shell errors are hidden.** Pipelines and command composition can accidentally swallow non-zero exits.
+
+**Platform assumptions leak in.** GNU utilities or shell features may behave differently on macOS, Linux and Windows.
+
+**The task file becomes a programming language.** Hundreds of lines of Make logic often indicate that part of the workflow belongs in a proper script or build tool.
 
 ## When to use it
 
-Use Make / task runners when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
+Use a task runner when a repository has several recurring commands that developers and CI need to execute consistently. It is particularly valuable with code generation, linters, integration tests, container builds and local infrastructure setup.
 
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Even five obvious tasks can be enough to justify it.
 
 ## When not to use it
 
-Do not use Make / task runners solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
+Do not add a task runner merely to wrap one obvious command such as `go test ./...`.
 
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Avoid a second orchestration layer if the ecosystem already provides a clear canonical interface and the wrapper adds no stability or discoverability.
+
+If a workflow requires substantial branching, data manipulation or error handling, use a real scripting/programming language rather than forcing complex logic into Make syntax.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Make / task runners without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
+A Senior Engineer should be able to design a small repository interface with predictable build, test, lint, generation and verification tasks.
 
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
+For Make specifically, they should understand targets, prerequisites, recipes, `.PHONY`, variables, exit behavior and enough shell semantics to debug failures. They should know when Make's dependency/timestamp model is useful and when Make is simply acting as a command dispatcher.
 
-For this blip specifically, a Senior Engineer should be comfortable with: problem and invariant, state and ownership, concurrency and failure, operational feedback, evolution and maintainability.
+They should also keep local and CI workflows aligned and make tool versions and environment assumptions explicit.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Make / task runners belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+A Staff Engineer should think about task runners as part of the **developer-platform contract**. Across many repositories, consistent concepts such as test, lint, build and verify reduce cognitive load and make CI templates, onboarding and coding-agent workflows easier to standardize.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
+The goal is not one enormous company Makefile. Teams may use Make, Task, Just, Gradle or ecosystem-native tools. What matters is a predictable interface and clear ownership.
 
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Make / task runners to business invariants, system architecture, organizational structure and long-term operational cost.
+Staff-level judgment also means knowing when standardization has gone too far: a paved road should remove repetitive decisions without hiding so much machinery that teams can no longer understand or debug their own build.
