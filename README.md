@@ -4,7 +4,9 @@
 
 **https://ammorteza.github.io/senior-backend-engineering-radar/**
 
-A public, opinionated learning radar for senior backend engineers growing toward Staff-level systems and architecture depth.
+A public, opinionated learning radar for backend engineers growing from Senior toward Staff-level depth in distributed systems, architecture, databases, reliability, cloud infrastructure, security, observability, developer tooling and AI-assisted engineering.
+
+Use it as a structured learning map: choose a blip, study its mechanics and production behavior, understand its trade-offs and failure modes, and build the judgment needed to make sound engineering decisions.
 
 The interactive site is generated with **AOE Technology Radar**. Each blip lives as Markdown under `radar/<release-date>/`, allowing richer explanations and revision history over time.
 
@@ -21,6 +23,12 @@ The interactive site is generated with **AOE Technology Radar**. Each blip lives
 - **Trial** — gain hands-on experience.
 - **Assess** — understand the problem, architecture, failure modes and trade-offs.
 - **Caution** — do not make this a default choice without a concrete reason.
+
+## Continuously maintained
+
+This radar is reviewed **twice per week, every Tuesday and Friday**. Each review looks for meaningful changes in backend engineering and also audits existing blips for technical accuracy, specificity and teaching quality. New technologies are added or repositioned only when there is a durable engineering reason—not simply because they are trending.
+
+The goal is to keep the radar useful as a living Senior-to-Staff learning resource. Existing articles may therefore be expanded or rewritten as better explanations, production lessons and ecosystem changes emerge.
 
 ## 20-minute daily routine
 
