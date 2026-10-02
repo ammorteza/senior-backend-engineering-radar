@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**WebAssembly** is a language, protocol, or framework in the backend-engineering landscape. Understand sandboxed portable execution and emerging server-side and plugin use cases. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **assess** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+WebAssembly (Wasm) is a portable binary instruction format executed by a runtime. Server-side use includes plugins and sandboxed extensions whose access to host capabilities can be restricted.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. WebAssembly matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use WebAssembly?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Running customer code inside a service requires a clear execution boundary. Wasm can help, but host functions and resource budgets determine what a module can actually do.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for WebAssembly, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For WebAssembly, the core mechanism is captured by this working definition: Understand sandboxed portable execution and emerging server-side and plugin use cases. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+A runtime validates and compiles or interprets a module. Linear memory and defined imports constrain access; the host deliberately supplies capabilities such as file or network operations. WASI defines system interfaces, with support varying by runtime and version. Sandboxing still depends on runtime correctness and safe host integrations.
 
 ## Key concepts
 
-### Execution or protocol model
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Type and contract semantics
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Concurrency and resource behavior
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Compatibility and evolution
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Diagnostics and performance
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Fuel or execution-time controls bound CPU where supported. Memory limits constrain linear memory. Host calls can escape resource assumptions if unbounded. ABI and component-interface versions affect portability beyond the core instruction format.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing WebAssembly because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If WebAssembly adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A rules service loads a customer-supplied module to transform records. It supplies only approved host functions, limits execution and memory, and validates output. A malicious infinite loop is interrupted under the runtime's supported budget; the host does not expose filesystem or cloud credentials.
 
 ## Trade-offs
 
-WebAssembly should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Portability and capability control support extension systems. Runtime overhead, debugging and ecosystem compatibility may make native trusted code simpler.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting WebAssembly from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Unrestricted imports, missing time budgets and assuming all runtimes implement the same WASI capabilities weaken the boundary.
 
 ## When to use it
 
-Use WebAssembly when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Assess Wasm for untrusted plugins or portable extensions with deliberately narrow host APIs.
 
 ## When not to use it
 
-Do not use WebAssembly solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not replace an ordinary trusted service merely to use a new runtime format.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain WebAssembly without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: execution or protocol model, type and contract semantics, concurrency and resource behavior, compatibility and evolution, diagnostics and performance.
+Understand module imports, memory and execution limits for the selected runtime.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether WebAssembly belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Evaluate runtime security, interface lifecycle and tenancy isolation under hostile workloads.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting WebAssembly to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [WebAssembly documentation](https://webassembly.org/), [WASI](https://wasi.dev/).

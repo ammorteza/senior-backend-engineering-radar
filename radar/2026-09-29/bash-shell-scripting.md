@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Bash / shell scripting** is a language, protocol, or framework in the backend-engineering landscape. Automate tasks safely with quoting, pipes, exit handling and portable command composition. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Shell scripting composes programs through arguments, exit statuses, pipes and redirection. Bash adds arrays and other features beyond portable POSIX shell behavior.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Bash / shell scripting matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Bash / shell scripting?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Automation bugs can misinterpret filenames, hide failed commands or run against the wrong environment. A ten-line deployment script deserves the same attention to inputs as application code.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Bash / shell scripting, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Bash / shell scripting, the core mechanism is captured by this working definition: Automate tasks safely with quoting, pipes, exit handling and portable command composition. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+The shell performs expansions before launching commands. Quoted variables preserve argument boundaries; unquoted expansions can split words and expand globs. Pipelines connect streams, but exit behavior depends on shell options. Each subprocess has its own environment and cannot directly change the parent's working directory.
 
 ## Key concepts
 
-### Execution or protocol model
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Type and contract semantics
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Concurrency and resource behavior
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Compatibility and evolution
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Diagnostics and performance
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Prefer arrays for dynamic Bash argument lists. `set -e` has contextual exceptions; it is not comprehensive error handling. `pipefail` exposes some pipeline failures but is not POSIX. Traps can clean temporary resources, provided cleanup does not obscure the original status.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Bash / shell scripting because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Bash / shell scripting adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A backup script passes an unquoted path containing spaces to a tool, creating multiple arguments. The corrected script quotes paths, validates required variables, checks the command status and writes into a temporary destination before publishing success. Tests cover missing input and failed uploads.
 
 ## Trade-offs
 
-Bash / shell scripting should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Shell excels at short command orchestration. Complex parsing, branching and retries become harder to maintain than equivalent Go or Python code.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Bash / shell scripting from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+`eval`, unsafe command substitution, newline-containing filenames and logs exposing credentials are common risks. Bash syntax run under `/bin/sh` can fail only in CI.
 
 ## When to use it
 
-Use Bash / shell scripting when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use shell for small, well-bounded workflows around reliable command-line tools.
 
 ## When not to use it
 
-Do not use Bash / shell scripting solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Move complicated data processing or recovery logic into a language with clearer types and error handling.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Bash / shell scripting without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: execution or protocol model, type and contract semantics, concurrency and resource behavior, compatibility and evolution, diagnostics and performance.
+Understand quoting, expansion, pipeline status and portability; use ShellCheck and explicit failure paths.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Bash / shell scripting belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Standardize interpreters and command contracts so automation behaves predictably across developer and CI environments.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Bash / shell scripting to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Bash manual](https://www.gnu.org/software/bash/manual/bash.html), [ShellCheck](https://www.shellcheck.net/).

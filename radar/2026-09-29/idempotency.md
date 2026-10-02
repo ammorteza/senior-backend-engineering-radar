@@ -48,7 +48,7 @@ A checkout client sends CreatePayment with an idempotency key. The payment servi
 
 The client retries. Instead of creating another charge, the service finds the existing key and returns the original payment result.
 
-For external providers, the same key should be propagated when their API supports idempotency, extending the guarantee across the side-effect boundary.
+For external providers, the same logical operation key should be propagated under their documented idempotency contract. A local transaction cannot atomically include an arbitrary provider call: persist the operation claim before calling, and use provider lookup or duplicate-safe retry to resolve a crash or timeout before the local result is recorded. If the same key arrives with a different payload, reject it rather than silently returning an unrelated result.
 
 ## Trade-offs
 

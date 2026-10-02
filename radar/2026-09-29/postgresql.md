@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**PostgreSQL** is a platform in the backend-engineering landscape. Know planner and statistics, indexing, MVCC, VACUUM, WAL, locks, replication, partitioning and connection management. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+PostgreSQL is a relational database with transactions, constraints, extensible types and a cost-based query planner. Its usefulness comes from combining rich SQL with enforceable data invariants, not just storing rows.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. PostgreSQL matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use PostgreSQL?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Application latency and correctness depend on how PostgreSQL plans queries, holds locks and manages row versions. Scaling application pods can worsen a database bottleneck by multiplying connections and competing queries.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for PostgreSQL, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For PostgreSQL, the core mechanism is captured by this working definition: Know planner and statistics, indexing, MVCC, VACUUM, WAL, locks, replication, partitioning and connection management. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Backends execute statements against MVCC snapshots. Writes create row versions and generate write-ahead log (WAL); checkpoints coordinate persisted pages with recovery. The planner selects scans and joins from statistics. Autovacuum removes reclaimable dead tuples and maintains transaction-ID safety; it is part of normal operation.
 
 ## Key concepts
 
-### Data model and access path
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Consistency and concurrency
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Storage and indexing
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Replication, recovery and durability
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Capacity and operational behavior
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Constraints enforce uniqueness and referential integrity. `pg_stat_activity` exposes sessions and waits; `pg_stat_statements`, when enabled, summarizes query workloads. Index-only scans depend on visibility information as well as index contents. Physical replication transfers WAL; logical replication transfers selected data changes.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing PostgreSQL because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If PostgreSQL adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+An account-profile table develops high update latency despite a useful index. Investigation finds an idle transaction retaining an old snapshot, preventing cleanup while updates accumulate dead tuples. Terminating the offending session under an agreed procedure and fixing transaction scope lets vacuum make progress. Table growth, oldest transaction age and query latency are monitored together.
 
 ## Trade-offs
 
-PostgreSQL should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Rich transactions and flexible queries reduce application complexity. Connections, indexes and background maintenance consume finite resources. Extensions add capabilities while complicating upgrades and managed-service portability.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting PostgreSQL from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Long transactions, stale statistics, excessive indexes, connection storms and blocked DDL are recurring problems. A read replica may be stale; asynchronous failover can lose recently acknowledged writes. Backups must include tested restoration.
 
 ## When to use it
 
-Use PostgreSQL when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use PostgreSQL for relational operational data, integrity constraints and workloads requiring multi-row transactions and evolving query patterns.
 
 ## When not to use it
 
-Do not use PostgreSQL solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not treat one instance as an unlimited analytical warehouse or blob store. Isolate expensive scans and evaluate specialized storage when workload evidence warrants it.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain PostgreSQL without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: data model and access path, consistency and concurrency, storage and indexing, replication, recovery and durability, capacity and operational behavior.
+Read execution plans and lock waits, size connection pools, use safe migrations, and understand MVCC, WAL and restore procedures.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether PostgreSQL belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Plan upgrade, replication, recovery and workload-isolation strategy. Decide which invariants stay local and which scaling choices change application guarantees.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting PostgreSQL to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [PostgreSQL documentation](https://www.postgresql.org/docs/current/).

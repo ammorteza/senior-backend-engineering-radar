@@ -52,7 +52,7 @@ Closed connections can temporarily retain kernel state to prevent old packets fr
 
 A Go service calls another internal service through an L7 load balancer. After a deployment, errors such as connection reset by peer increase.
 
-The application creates a new HTTP client for every request, preventing effective connection reuse. The load balancer also has an idle timeout shorter than the client's assumptions.
+The application creates a new HTTP client with a new transport for every request, preventing effective connection reuse. Creating only a new client can still share Go's default transport; it is the repeated creation of independent transports that fragments the pool. The load balancer also has an idle timeout shorter than the client's assumptions.
 
 Using a shared HTTP client and transport, configuring sensible idle-connection settings, and aligning timeouts reduces connection churn and removes many resets. Metrics on connection creation and request phases make the diagnosis visible.
 
@@ -64,7 +64,7 @@ TCP provides reliability, but head-of-line behavior and connection state have co
 
 ## Failure modes / pitfalls
 
-Typical problems include leaking response bodies or sockets, creating clients per request, pool exhaustion, stale pooled connections, mismatched idle timeouts, connection storms during autoscaling, SYN backlog pressure and assuming a socket write means the remote application committed the operation.
+Typical problems include leaking response bodies or sockets, creating independent transports per request, pool exhaustion, stale pooled connections, mismatched idle timeouts, connection storms during autoscaling, SYN backlog pressure and assuming a socket write means the remote application committed the operation.
 
 Another pitfall is diagnosing only average latency. Retransmission and network congestion often appear in tail latency.
 

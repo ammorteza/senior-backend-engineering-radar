@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Content delivery networks** is a platform in the backend-engineering landscape. Understand edge caching, cache keys, invalidation, origin protection and latency/cost trade-offs. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **trial** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+A CDN serves content from distributed edge locations and reduces work at the origin. Correctness depends on what identifies a cached representation and which responses may be shared.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Content delivery networks matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Content delivery networks?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+An incorrect cache key can disclose one user's response to another. Even a well-configured CDN can overwhelm an origin during cache misses or invalidation.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Content delivery networks, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Content delivery networks, the core mechanism is captured by this working definition: Understand edge caching, cache keys, invalidation, origin protection and latency/cost trade-offs. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+An edge receives a request, selects a cache entry under its key and freshness rules, and fetches or revalidates against the origin when needed. HTTP cache directives, variants and CDN-specific policies govern reuse. Purges propagate under provider guarantees; they are not universal synchronous transactions.
 
 ## Key concepts
 
-### Ordering and partitioning
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Delivery, acknowledgement and replay
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Consumer state and idempotency
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Backpressure and failure handling
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Schema and contract evolution
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+`Vary` and query/header policies distinguish representations. Private responses need deliberate exclusion or partitioning. TTL and stale-serving rules trade freshness against availability. Origin authentication prevents clients bypassing intended edge protections.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Content delivery networks because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Content delivery networks adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A documentation site publishes assets with content-hashed names and long TTLs while HTML has shorter freshness. A new release points to new asset names, avoiding global purge dependency. A personalized account API is excluded from shared caching and tested with two identities.
 
 ## Trade-offs
 
-Content delivery networks should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Edges reduce latency and origin traffic. Cache invalidation, request normalization and provider-specific behavior add complexity; dynamic personalized requests may benefit less.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Content delivery networks from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Ignoring cookies or authorization in policy, inconsistent URL normalization, cache poisoning and simultaneous cold misses create security or capacity incidents.
 
 ## When to use it
 
-Use Content delivery networks when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use CDNs for static assets and explicitly cacheable responses, with measured origin protection.
 
 ## When not to use it
 
-Do not use Content delivery networks solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not cache sensitive personalized data by default or assume all errors deserve the same TTL.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Content delivery networks without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: ordering and partitioning, delivery, acknowledgement and replay, consumer state and idempotency, backpressure and failure handling, schema and contract evolution.
+Inspect cache headers, keys, hit/miss behavior and purge semantics.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Content delivery networks belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Own edge/origin trust, cache correctness and capacity during regional misses or releases.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Content delivery networks to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [HTTP caching RFC 9111](https://www.rfc-editor.org/rfc/rfc9111).

@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**JSON Schema** is a language, protocol, or framework in the backend-engineering landscape. Use machine-readable validation for JSON payloads and configuration and understand schema evolution. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **trial** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+JSON Schema describes constraints on JSON instances, including types, object properties, arrays and composition. A schema's declared dialect determines the meaning of its keywords.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. JSON Schema matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use JSON Schema?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Boundary validation catches malformed payloads before they reach business logic. It does not determine whether a valid amount belongs to the caller or whether a referenced account exists.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for JSON Schema, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For JSON Schema, the core mechanism is captured by this working definition: Use machine-readable validation for JSON payloads and configuration and understand schema evolution. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+A validator evaluates an instance against schema assertions. `$schema` identifies the dialect; `$ref` reuses definitions. Keywords such as `required`, `minimum` and `additionalProperties` restrict values. Composition with `allOf`, `anyOf` and `oneOf` has distinct logic; `oneOf` requires exactly one matching branch.
 
 ## Key concepts
 
-### Execution or protocol model
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Type and contract semantics
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Concurrency and resource behavior
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Compatibility and evolution
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Diagnostics and performance
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Presence differs from nullability. A property listed under `properties` is not automatically required. Format behavior depends on dialect and validator configuration. Remote references can introduce availability or trust issues and should be controlled.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing JSON Schema because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If JSON Schema adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+An integration accepts webhook configuration. The schema requires an HTTPS URL string and limits event-list size; business validation additionally rejects destinations inside private networks under the application's SSRF policy. The team tests ambiguous `oneOf` branches and pins the validator dialect in CI.
 
 ## Trade-offs
 
-JSON Schema should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Declarative validation is reusable across tooling. Complex compositions can produce confusing errors or high evaluation cost; custom semantics still belong in application checks.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting JSON Schema from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Using a schema with the wrong dialect, assuming `format` is always enforced and closing objects too aggressively during evolution can break clients.
 
 ## When to use it
 
-Use JSON Schema when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use JSON Schema for configuration and JSON boundary validation with controlled validator behavior.
 
 ## When not to use it
 
-Do not use JSON Schema solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not use it as a replacement for authorization, database constraints or semantic business validation.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain JSON Schema without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: execution or protocol model, type and contract semantics, concurrency and resource behavior, compatibility and evolution, diagnostics and performance.
+Understand required/null, composition and reference resolution; return actionable validation errors.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether JSON Schema belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Define dialect, compatibility and validation-cost policies across producers and consumers.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting JSON Schema to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [JSON Schema documentation](https://json-schema.org/learn).

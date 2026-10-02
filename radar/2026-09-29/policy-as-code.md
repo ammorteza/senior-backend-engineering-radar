@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Policy as code** is a engineering technique in the backend-engineering landscape. Express infrastructure, security and deployment policies as reviewable and testable code with automated enforcement. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **trial** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Policy as code expresses rules in reviewable programs and evaluates them against structured inputs. It separates policy decisions from the systems enforcing them.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Policy as code matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Policy as code?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Rules such as “production workloads cannot request privileged mode” should not depend on a manual checklist. Automation makes violations visible and repeatable across environments.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Policy as code, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Policy as code, the core mechanism is captured by this working definition: Express infrastructure, security and deployment policies as reviewable and testable code with automated enforcement. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+A caller supplies facts—such as a deployment manifest and environment—to a policy engine. Rules return decisions or violations. The enforcement point decides whether to block, warn or record. Policies need tests and versioning; input schema changes can alter decisions even when rule code is unchanged.
 
 ## Key concepts
 
-### Identity and trust boundary
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Authentication and authorization
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Least privilege
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Key or credential lifecycle
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Auditability and failure containment
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Decision and enforcement are separate responsibilities. Fail-open versus fail-closed behavior needs a risk-based choice. Exceptions should be scoped and expire. Audit evidence should include policy version and relevant non-sensitive inputs.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Policy as code because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Policy as code adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+An admission policy rejects containers mounting a host socket in production. A CI check evaluates the same intended rule before merge. A narrowly scoped maintenance exception includes an owner and expiry. Tests cover missing fields so omission cannot accidentally become an allow decision.
 
 ## Trade-offs
 
-Policy as code should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Automated rules improve consistency. Central policy can block legitimate changes or create outages when inputs or enforcement behavior differ between environments.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Policy as code from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Untested rules, permanent exceptions, implicit allow on engine failure and divergence between CI and admission undermine trust.
 
 ## When to use it
 
-Use Policy as code when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use policy as code for repeated, objectively checkable infrastructure or access requirements.
 
 ## When not to use it
 
-Do not use Policy as code solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not encode subjective architecture judgment as an inflexible rule without a clear exception process.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Policy as code without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: identity and trust boundary, authentication and authorization, least privilege, key or credential lifecycle, auditability and failure containment.
+Write positive and negative policy tests and inspect actual enforcement behavior.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Policy as code belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Define policy ownership, staged rollout and emergency bypass that preserves auditability.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Policy as code to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Open Policy Agent](https://www.openpolicyagent.org/docs/).

@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Cloud IAM** is a engineering technique in the backend-engineering landscape. Design workload and human identities with least privilege, short-lived credentials, role boundaries and auditable access. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Cloud IAM defines who or what may operate cloud resources. It covers human access and workload identities, with policies scoped to resources and administrative boundaries.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Cloud IAM matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Cloud IAM?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+An application compromise becomes a cloud compromise if its identity can modify unrelated databases or secrets. Long-lived credentials make containment and rotation harder.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Cloud IAM, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Cloud IAM, the core mechanism is captured by this working definition: Design workload and human identities with least privilege, short-lived credentials, role boundaries and auditable access. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+An identity obtains credentials and presents them to a service. The service evaluates permissions under provider-specific policies, inheritance and conditions. Workload federation or metadata-based identity can issue short-lived credentials without baking keys into images. Human administration should use audited identities and bounded elevation.
 
 ## Key concepts
 
-### Control plane and data plane
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Identity and configuration
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Scheduling and capacity
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Networking and failure domains
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Deployment and observability
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Authentication differs from permission evaluation. Role inheritance can widen effective access. Service-account impersonation is a privilege in its own right. Organization policies and deny mechanisms differ from ordinary grants and vary by cloud.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Cloud IAM because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Cloud IAM adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A report worker only needs to read one bucket and write another. Its workload identity receives those grants, while deployment automation owns infrastructure changes. A leaked application token cannot create new IAM bindings. Audit records and a negative-access test confirm the intended separation.
 
 ## Trade-offs
 
-Cloud IAM should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Fine-grained permissions reduce blast radius but require ownership and maintenance. Broad predefined roles are convenient but can authorize unrelated operations.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Cloud IAM from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Static keys in repositories, wildcard resources, shared accounts and unnoticed inherited permissions weaken containment. Changing IAM can also break production if token and propagation behavior are misunderstood.
 
 ## When to use it
 
-Use Cloud IAM when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use dedicated workload identities and least-privilege grants for every production component.
 
 ## When not to use it
 
-Do not use Cloud IAM solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Avoid creating custom roles without reviewing whether stable supported roles already meet the need.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Cloud IAM without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: control plane and data plane, identity and configuration, scheduling and capacity, networking and failure domains, deployment and observability.
+Inspect effective permissions, credential sources and audit evidence; test denied operations too.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Cloud IAM belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Design identity boundaries, elevation and federation across environments and teams.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Cloud IAM to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Google Cloud IAM overview](https://docs.cloud.google.com/iam/docs/overview), [AWS IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html).

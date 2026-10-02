@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**API security and abuse prevention** is a engineering technique in the backend-engineering landscape. Design APIs against broken authorization, injection, SSRF, replay, credential abuse and resource-exhaustion attacks. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+API security protects data and operations from unauthorized or malicious use. Abuse prevention also addresses valid credentials used to exhaust resources or exploit an allowed business flow.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. API security and abuse prevention matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use API security and abuse prevention?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+A token-valid request can still read another tenant's document or launch an unaffordable export. Authentication and ordinary request-rate limits are insufficient for both cases.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for API security and abuse prevention, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For API security and abuse prevention, the core mechanism is captured by this working definition: Design APIs against broken authorization, injection, SSRF, replay, credential abuse and resource-exhaustion attacks. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Validate identity, authorize each requested object and action, constrain input and resource use, then enforce business rules. Parameterized queries separate SQL data from code. Outbound URL features need destination validation and network controls against SSRF. Expensive operations may require concurrency, size and per-customer budgets rather than requests-per-second alone.
 
 ## Key concepts
 
-### Ordering and partitioning
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Delivery, acknowledgement and replay
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Consumer state and idempotency
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Backpressure and failure handling
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Schema and contract evolution
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Object-level authorization checks ownership or relationships. Property-level authorization limits fields a caller can read or change. Replay protection requires operation identity or suitable nonce semantics. Inventory and schema tracking expose forgotten endpoints and unexpected inputs.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing API security and abuse prevention because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If API security and abuse prevention adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A report endpoint accepts a customer ID and URL callback. Tests prove one tenant cannot export another's records. URL handling rejects forbidden destinations and redirects under the chosen network policy; export row and concurrency limits prevent authenticated bulk abuse. Audit logs identify the actor without recording report contents.
 
 ## Trade-offs
 
-API security and abuse prevention should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Strict controls reduce misuse but can impede legitimate bulk customers. Risk-based limits and explicit premium workflows are better than silently weakening shared protection.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting API security and abuse prevention from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Mass assignment, UUIDs mistaken for authorization, broad CORS assumptions and validating only the first URL before redirects are common gaps.
 
 ## When to use it
 
-Use API security and abuse prevention when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Apply API security to every exposed operation, including internal APIs and authenticated automation.
 
 ## When not to use it
 
-Do not use API security and abuse prevention solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not delegate all resource authorization to a gateway or equate a clean vulnerability scan with secure behavior.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain API security and abuse prevention without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: ordering and partitioning, delivery, acknowledgement and replay, consumer state and idempotency, backpressure and failure handling, schema and contract evolution.
+Write adversarial tenant-boundary, field-permission and resource-exhaustion tests.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether API security and abuse prevention belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Own API inventory, abuse economics and layered enforcement across ingress, services and data stores.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting API security and abuse prevention to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [OWASP API Security Top 10](https://owasp.org/API-Security/editions/2023/en/0x11-t10/).

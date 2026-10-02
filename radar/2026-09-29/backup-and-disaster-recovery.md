@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Backup and disaster recovery** is a engineering technique in the backend-engineering landscape. Define RPO and RTO, validate backups through restoration, and design recovery procedures for realistic failure scenarios. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Backups preserve recoverable copies; disaster recovery restores a usable service after loss or corruption. Replication and high availability do not replace protection from accidental deletion or compromised credentials.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Backup and disaster recovery matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Backup and disaster recovery?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+A successful backup job proves that data was copied, not that the business can resume within its promised time. Recovery depends on keys, configuration, dependencies and operator access too.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Backup and disaster recovery, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Backup and disaster recovery, the core mechanism is captured by this working definition: Define RPO and RTO, validate backups through restoration, and design recovery procedures for realistic failure scenarios. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Choose recovery point and recovery time objectives, then design snapshots, log archives and independent copies accordingly. Restore into an isolated environment, verify integrity and application behavior, and rehearse cutover. Point-in-time recovery combines an appropriate base copy with retained logs; available targets depend on their continuity and retention.
 
 ## Key concepts
 
-### Context and contracts
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Nondeterminism and evaluation
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Tool and data boundaries
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Observability and cost
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Human control and security
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+RPO describes tolerable data loss; RTO describes tolerable recovery duration. Immutable or separately controlled copies limit destructive credential reach. Restore bandwidth and database replay determine actual recovery time. Reconciliation resolves work performed outside the restored database.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Backup and disaster recovery because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Backup and disaster recovery adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A faulty cleanup deletes active records at 14:05. The team restores to a timestamp before the mistake, validates critical counts and identifies legitimate changes made afterward. It reconciles external payments before reopening writes. The drill had already tested encryption-key access and documented who authorizes cutover.
 
 ## Trade-offs
 
-Backup and disaster recovery should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+More copies and longer retention improve recovery options but add storage, testing and privacy obligations. Aggressive RTO may require warm capacity rather than backups alone.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Backup and disaster recovery from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Untested restores, missing encryption keys, backups in the same administrative blast radius and recovery that resurrects expired data are serious gaps.
 
 ## When to use it
 
-Use Backup and disaster recovery when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use backups and recovery planning for every authoritative dataset, proportional to its business importance.
 
 ## When not to use it
 
-Do not use Backup and disaster recovery solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not claim recovery from replica count or green backup status alone.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Backup and disaster recovery without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: context and contracts, nondeterminism and evaluation, tool and data boundaries, observability and cost, human control and security.
+Restore and validate the service, not just its files; explain achievable RPO/RTO.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Backup and disaster recovery belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Coordinate recovery authority, independent copies and reconciliation across all critical systems.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Backup and disaster recovery to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [PostgreSQL continuous archiving/PITR](https://www.postgresql.org/docs/current/continuous-archiving.html).

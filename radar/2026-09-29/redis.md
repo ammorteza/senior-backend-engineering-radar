@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Redis** is a platform in the backend-engineering landscape. Understand caching, data structures, persistence, eviction, replication, clustering, hot keys and failure modes. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Redis is an in-memory data-structure server supporting strings, hashes, sets, sorted sets and other structures. Persistence and replication are configurable, so durability must be assessed for the selected deployment.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Redis matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Redis?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Redis can make repeated access fast, but eviction, failover and hot keys affect application semantics. A cache disappearing must not automatically overwhelm the authoritative database.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Redis, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Redis, the core mechanism is captured by this working definition: Understand caching, data structures, persistence, eviction, replication, clustering, hot keys and failure modes. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Clients send commands to the responsible server. Commands execute under Redis's documented atomicity model; scripts can combine operations but must remain bounded. RDB snapshots and AOF logging offer different recovery behavior. Replication is normally asynchronous. Cluster partitions keys across hash slots, constraining multi-key operations across slots.
 
 ## Key concepts
 
-### Data model and access path
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Consistency and concurrency
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Storage and indexing
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Replication, recovery and durability
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Capacity and operational behavior
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+TTL expiration differs from capacity eviction. `maxmemory` and eviction policy determine what happens at the configured budget. Hash tags can colocate related keys but create hotspots. Persistence buffers and other overhead require memory headroom beyond stored values.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Redis because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Redis adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A session cache grows beyond its budget and evicts active sessions under an unintended policy. The team isolates session storage from disposable catalog caching, sets deliberate limits and tests failover/session behavior. Catalog misses are coalesced and rate-controlled so a cold cache cannot overload PostgreSQL.
 
 ## Trade-offs
 
-Redis should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Low latency and useful structures simplify some workloads. Memory is costly, and asynchronous replication leaves data-loss windows. Redis is not automatically a durable source of truth.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Redis from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Large blocking operations, hot keys, unlimited TTLs, oversized values and mixed critical/disposable data cause failures.
 
 ## When to use it
 
-Use Redis when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use Redis for bounded caches and data-structure workloads with explicit persistence and loss semantics.
 
 ## When not to use it
 
-Do not use Redis solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not depend on an evictable cache for authoritative financial state.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Redis without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: data model and access path, consistency and concurrency, storage and indexing, replication, recovery and durability, capacity and operational behavior.
+Understand command complexity, TTLs, eviction, persistence and cluster slot behavior.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Redis belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Define storage roles, failover guarantees and cold-cache capacity across consumers.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Redis to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Redis persistence](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/), [Eviction](https://redis.io/docs/latest/develop/reference/eviction/).

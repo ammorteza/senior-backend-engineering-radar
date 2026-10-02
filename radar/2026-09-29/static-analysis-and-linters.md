@@ -7,87 +7,50 @@ tags: [backend]
 
 ## What it is
 
-**Static analysis and linters** is a tool in the backend-engineering landscape. Use automated analysis to catch correctness, security and maintainability issues early. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Static analysis examines source code without running the program. Compiler checks establish language validity and type correctness; linters flag suspicious constructs or conventions that valid programs can still violate. SAST adds security-focused analysis, often following untrusted input toward dangerous operations.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Static analysis and linters matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Static analysis and linters?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+A Go service can compile while copying a mutex, ignoring cancellation, or calling `Printf` with incompatible arguments. Catching such mistakes before review leaves reviewers more time for business behavior and architecture.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Static analysis and linters, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Static analysis and linters, the core mechanism is captured by this working definition: Use automated analysis to catch correctness, security and maintainability issues early. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+An analyzer parses an abstract syntax tree (AST), resolves symbols and types, and applies rules. Syntax rules recognize local patterns; control-flow graphs describe reachable paths; data-flow or SSA analysis tracks values between assignments and calls. Interprocedural analysis follows information across functions, increasing cost and requiring approximations. These approximations create both false positives and false negatives.
 
 ## Key concepts
 
-### Identity and trust boundary
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Authentication and authorization
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Least privilege
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Key or credential lifecycle
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Auditability and failure containment
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+- **Ruleset:** distinguish correctness checks from optional style opinions.
+- **Baseline:** record existing findings while preventing new violations; retire the baseline gradually.
+- **Suppression:** name the rule and explain why this location is safe, rather than disabling a category globally.
+- **Incremental analysis:** cache package facts or reanalyze changed dependencies; changed lines alone may miss cross-function defects.
+- **Custom rules:** enforce a concrete local invariant, such as forbidding a deprecated client, with positive and negative fixtures.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Static analysis and linters because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Static analysis and linters adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+Illustrative Go adoption: CI runs `go vet ./...` and pinned Staticcheck with the same build tags used locally. Vet catches a copied lock and a missing cancel call; Staticcheck flags an ineffective assignment. Existing style findings enter a reviewed baseline. A security analyzer separately examines SQL construction. Race tests remain necessary because static checks do not establish freedom from runtime races.
 
 ## Trade-offs
 
-Static analysis and linters should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Broader analysis detects more defect classes but takes longer and can interrupt developers with speculative warnings. A small reliable blocking ruleset usually earns more trust than hundreds of noisy checks. Security findings need exploitability review, not automatic dismissal as lint.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Static analysis and linters from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Unpinned analyzer upgrades can break unrelated PRs. Generated code needs an explicit policy: check generator inputs and compile outputs, while suppressing unsuitable style checks. Missing build variants, broad exclusions and undocumented suppressions produce blind spots. A clean report proves only that the enabled analyses found nothing.
 
 ## When to use it
 
-Use Static analysis and linters when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Run fast diagnostics in the editor and authoritative, version-pinned checks in CI. Introduce rules in warning mode, measure noise, then block new high-confidence defects.
 
 ## When not to use it
 
-Do not use Static analysis and linters solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not use a linter as proof of business correctness or replace tests, fuzzing and review. Avoid enforcing stylistic rules whose churn costs more than their demonstrated benefit.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Static analysis and linters without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: identity and trust boundary, authentication and authorization, least privilege, key or credential lifecycle, auditability and failure containment.
+Read findings against the actual code path, configure language-specific tools, reconcile editor and CI settings, and justify suppressions. Know which checks require types, whole packages or specific build tags.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Static analysis and linters belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Set an adoption policy across repositories that budgets analysis time and owns baseline reduction. Evaluate whether custom rules prevent recurring incidents and whether false positives encourage developers to bypass checks.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Static analysis and linters to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Go analysis API](https://pkg.go.dev/golang.org/x/tools/go/analysis), [Staticcheck](https://staticcheck.dev/docs/), [gopls analyzers](https://go.dev/gopls/analyzers).

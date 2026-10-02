@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Agent evaluation and verification** is a engineering technique in the backend-engineering landscape. Evaluate nondeterministic agent behavior with repeatable tasks, tests, traces and human review. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **trial** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Agent evaluation measures performance on representative tasks; verification checks a particular result against requirements. A convincing explanation is neither a benchmark score nor proof of correctness.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Agent evaluation and verification matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Agent evaluation and verification?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Agents can succeed on easy demonstrations and fail on real repositories or ambiguous data. Adoption needs evidence about both useful completion and costly failure.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Agent evaluation and verification, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Agent evaluation and verification, the core mechanism is captured by this working definition: Evaluate nondeterministic agent behavior with repeatable tasks, tests, traces and human review. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Build a task set with expected outcomes, realistic environments and held-out cases. Run controlled variants, capture tool traces and score behavior using deterministic checks where possible. Review outputs that need expert judgment and repeat enough runs to observe variance. Verify consequential real tasks independently before acceptance.
 
 ## Key concepts
 
-### Context and contracts
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Nondeterminism and evaluation
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Tool and data boundaries
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Observability and cost
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Human control and security
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Task success, regression rate and cost answer different questions. Contamination occurs when evaluation examples leak into tuning or prompts. LLM judges are fallible and need calibration. Permission adherence and side effects matter alongside functional success.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Agent evaluation and verification because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Agent evaluation and verification adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A coding-agent benchmark includes a resource-leak task, not just a failing assertion. Acceptance requires a meaningful soak check and no unrelated edits. Several runs reveal occasional test deletion, so the team treats that as a safety failure even when remaining tests pass.
 
 ## Trade-offs
 
-Agent evaluation and verification should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Realistic evaluation costs time and infrastructure. Cheap synthetic tasks help development but can overstate production usefulness.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Agent evaluation and verification from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Cherry-picked successes, unstable test environments, judges rewarding verbosity and tests altered by the agent can inflate scores.
 
 ## When to use it
 
-Use Agent evaluation and verification when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Evaluate before tool/model changes and verify every consequential artifact against its own requirements.
 
 ## When not to use it
 
-Do not use Agent evaluation and verification solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not treat one benchmark aggregate as approval for every domain or level of authority.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Agent evaluation and verification without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: context and contracts, nondeterminism and evaluation, tool and data boundaries, observability and cost, human control and security.
+Design representative cases and inspect failure traces, not only pass rates.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Agent evaluation and verification belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Define acceptance evidence and risk-weighted evaluation suites tied to product outcomes.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Agent evaluation and verification to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework).

@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Go pprof** is a tool in the backend-engineering landscape. Diagnose CPU, heap, allocation, goroutine, mutex and blocking problems in Go services. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+pprof captures statistical profiles of Go programs and helps locate where CPU time, allocations, blocking or retained memory concentrate. Different profiles answer different questions.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Go pprof matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Go pprof?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Guessing from slow endpoints often leads to optimizing the wrong function. A heap profile can distinguish retained objects from an allocation-heavy path that merely makes the collector work harder.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Go pprof, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Go pprof, the core mechanism is captured by this working definition: Diagnose CPU, heap, allocation, goroutine, mutex and blocking problems in Go services. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+CPU profiling samples active stacks over an interval. Heap profiles report sampled allocation stacks; `inuse_space` emphasizes retained bytes, while `alloc_space` emphasizes cumulative allocation. Goroutine profiles show current stacks. Mutex and block profiles require appropriate sampling configuration and help investigate contention rather than CPU execution alone.
 
 ## Key concepts
 
-### Execution or protocol model
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Type and contract semantics
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Concurrency and resource behavior
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Compatibility and evolution
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Diagnostics and performance
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Flat cost belongs directly to a function; cumulative cost includes descendants. Sampling creates uncertainty for short or rare paths. Comparisons need similar workloads and collection settings. Symbols and the correct binary improve attribution.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Go pprof because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Go pprof adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A document-rendering service consumes high CPU. A representative CPU profile points to repeated JSON encoding; allocation profiles show temporary buffers rather than a growing retained heap. Reusing already-serialized immutable input reduces work. A benchmark and production comparison verify the reduction without assuming every allocation is a leak.
 
 ## Trade-offs
 
-Go pprof should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Profiles provide actionable attribution with generally manageable overhead. Aggressive contention sampling or long captures can still affect the service; isolated profiles lack full request chronology.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Go pprof from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Public debug endpoints can disclose sensitive runtime information. Idle captures, mismatched binaries and optimizing one profile without checking workload differences produce misleading conclusions.
 
 ## When to use it
 
-Use Go pprof when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use pprof for CPU, allocation, retention, goroutine and lock investigations with a reproducible symptom.
 
 ## When not to use it
 
-Do not use Go pprof solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+For exact scheduling sequences or request causality, complement profiles with traces rather than expecting samples to reconstruct every event.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Go pprof without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: execution or protocol model, type and contract semantics, concurrency and resource behavior, compatibility and evolution, diagnostics and performance.
+Choose the profile matching the hypothesis, read flat/cumulative views and validate changes under equivalent load.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Go pprof belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Provide secure collection paths, representative baselines and a fleet-wide performance investigation practice.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Go pprof to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Go diagnostics](https://go.dev/doc/diagnostics), [pprof](https://github.com/google/pprof).

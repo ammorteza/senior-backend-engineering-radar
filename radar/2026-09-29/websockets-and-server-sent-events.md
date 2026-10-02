@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**WebSockets and Server-Sent Events** is a language, protocol, or framework in the backend-engineering landscape. Understand long-lived server-client communication, connection management, backpressure, reconnection and when SSE or WebSockets fit. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **trial** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+WebSockets provide bidirectional message exchange over a long-lived connection. Server-Sent Events (SSE) deliver a server-to-client event stream using HTTP and a text event format.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. WebSockets and Server-Sent Events matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use WebSockets and Server-Sent Events?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Live status updates avoid constant polling, but every connected client consumes resources. Slow readers and reconnections need design rather than an indefinitely growing per-client buffer.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for WebSockets and Server-Sent Events, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For WebSockets and Server-Sent Events, the core mechanism is captured by this working definition: Understand long-lived server-client communication, connection management, backpressure, reconnection and when SSE or WebSockets fit. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+WebSocket peers exchange framed messages after establishing a connection. SSE sends `text/event-stream` records and supports event IDs and browser reconnection behavior. Applications define heartbeat, authentication and replay policy. Proxy buffering and idle timeouts can interrupt either approach.
 
 ## Key concepts
 
-### Ordering and partitioning
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Delivery, acknowledgement and replay
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Consumer state and idempotency
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Backpressure and failure handling
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Schema and contract evolution
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+SSE is one-way and text-based; WebSockets support two-way and binary messages. An event ID helps resume only if the server retains replayable history. Connection authentication may need renewal. Per-client buffer limits determine slow-consumer handling.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing WebSockets and Server-Sent Events because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If WebSockets and Server-Sent Events adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A report dashboard uses SSE because clients only need progress updates. It supplies event IDs and retains recent progress transitions. On reconnect the server replays missed updates or sends a fresh snapshot when history expired. Slow clients are disconnected before buffers exhaust service memory.
 
 ## Trade-offs
 
-WebSockets and Server-Sent Events should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Persistent streams reduce polling overhead and update latency. They complicate load balancing, deployments and capacity compared with short requests.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting WebSockets and Server-Sent Events from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Missing heartbeats, disabled authentication checks after connection, proxy buffering and assuming reconnect guarantees delivery produce stale interfaces or leaks.
 
 ## When to use it
 
-Use WebSockets and Server-Sent Events when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use SSE for server-driven updates; use WebSockets when true bidirectional messaging is required.
 
 ## When not to use it
 
-Do not use WebSockets and Server-Sent Events solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Simple occasional updates may be easier with polling. Neither protocol alone supplies durable messaging semantics.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain WebSockets and Server-Sent Events without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: ordering and partitioning, delivery, acknowledgement and replay, consumer state and idempotency, backpressure and failure handling, schema and contract evolution.
+Design reconnect, bounded buffering, heartbeat and graceful shutdown behavior.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether WebSockets and Server-Sent Events belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Budget concurrent connections and define delivery/freshness guarantees across regions and deployments.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting WebSockets and Server-Sent Events to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [WebSocket RFC 6455](https://www.rfc-editor.org/rfc/rfc6455), [HTML server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html).

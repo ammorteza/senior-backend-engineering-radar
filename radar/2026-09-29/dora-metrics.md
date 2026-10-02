@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**DORA metrics** is a engineering technique in the backend-engineering landscape. Use delivery and stability measures as system-level feedback rather than simplistic individual productivity scores. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+DORA's software-delivery metrics describe an application's delivery throughput and instability. They are feedback about a delivery system, not an individual engineer's productivity score.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. DORA metrics matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use DORA metrics?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Slow or risky releases often reflect review queues, test environments and deployment design. Measurement helps identify these constraints without counting code volume.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for DORA metrics, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For DORA metrics, the core mechanism is captured by this working definition: Use delivery and stability measures as system-level feedback rather than simplistic individual productivity scores. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Collect consistent events for commits, deployments and deployment-related interventions. The current five-metric guidance includes change lead time, deployment frequency, failed deployment recovery time, change fail rate and deployment rework rate. Follow one application's trends and investigate changes with the people operating the process.
 
 ## Key concepts
 
-### Ordering and partitioning
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Delivery, acknowledgement and replay
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Consumer state and idempotency
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Backpressure and failure handling
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Schema and contract evolution
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Change lead time covers commit to production. Failed deployment recovery time is narrower than all-incident MTTR. Change fail rate counts deployments needing intervention; deployment rework rate captures unplanned deployments resulting from incidents. Definitions and denominators must stay explicit.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing DORA metrics because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If DORA metrics adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A team's lead time rises although coding time is stable. Mapping the delivery flow shows changes waiting two days for a shared test environment. Fixing environment access shortens lead time while change failure and rework are monitored, demonstrating improvement without rewarding more commits or trivial deployments.
 
 ## Trade-offs
 
-DORA metrics should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+A small set of metrics supports discussion. Precise collection can be costly, and comparing unlike applications may obscure context. Product outcomes still need separate measurement.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting DORA metrics from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+League tables, individual targets, gaming deployment counts and treating older four-key definitions as the only current model distort improvement.
 
 ## When to use it
 
-Use DORA metrics when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use DORA metrics to evaluate one delivery system over time and test improvement hypotheses.
 
 ## When not to use it
 
-Do not use DORA metrics solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not rank people or mechanically compare unrelated services with different constraints.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain DORA metrics without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: ordering and partitioning, delivery, acknowledgement and replay, consumer state and idempotency, backpressure and failure handling, schema and contract evolution.
+Understand event definitions and investigate the process behind a trend.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether DORA metrics belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Use shared feedback to reduce systemic bottlenecks while preserving reliability and avoiding metric gaming.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting DORA metrics to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [DORA metrics guidance](https://dora.dev/guides/dora-metrics/) (checked 2026-10-02).

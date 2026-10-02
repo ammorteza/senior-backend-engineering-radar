@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Saga pattern** is a engineering technique in the backend-engineering landscape. Coordinate multi-service transactions with local transactions and compensations; compare orchestration and choreography. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **trial** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+A saga coordinates a business operation through multiple local transactions and explicit compensating actions. It manages partial completion without pretending that independent services share one database transaction.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Saga pattern matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Saga pattern?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Reservations, contracts and external payments cannot always commit together. The application needs a defined business outcome when some steps succeed and later steps fail.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Saga pattern, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Saga pattern, the core mechanism is captured by this working definition: Coordinate multi-service transactions with local transactions and compensations; compare orchestration and choreography. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+An orchestrator persists each step and its outcome, or services choreograph progress through events. After failure, completed steps are compensated where possible. Compensation is a new business action, not a byte-for-byte rollback; it can fail and require retries or manual resolution. Steps and compensations need stable operation identities.
 
 ## Key concepts
 
-### Problem and invariant
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### State and ownership
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Concurrency and failure
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Operational feedback
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Evolution and maintainability
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Pivot steps may make cancellation impossible; subsequent work must then move forward toward completion. Timeouts indicate unknown outcomes, not necessarily failed steps. Isolation is weaker than a single transaction, so intermediate states need product semantics.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Saga pattern because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Saga pattern adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A travel booking reserves a hotel and flight, then payment fails. The saga cancels both reservations. Flight cancellation succeeds, but the hotel service is unavailable; the persisted saga remains compensating and retries later. Customer support sees the unresolved reservation rather than a misleading fully-cancelled status.
 
 ## Trade-offs
 
-Saga pattern should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Sagas enable independent service ownership but expose intermediate states and complex compensation. Orchestration centralizes visibility; choreography reduces one controller but can obscure the process.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Saga pattern from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Missing compensation, double execution, circular event chains and treating refunds as perfect rollback are common failures.
 
 ## When to use it
 
-Use Saga pattern when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use a saga for multi-owner workflows where local transactions and explicit recovery match business semantics.
 
 ## When not to use it
 
-Do not use Saga pattern solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Keep tightly coupled updates in one transaction when one owner and database can handle them.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Saga pattern without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: problem and invariant, state and ownership, concurrency and failure, operational feedback, evolution and maintainability.
+Model each failure and ambiguous-outcome path, including compensation failures.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Saga pattern belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Define cross-team process ownership, customer-visible states and escalation for irreversibility.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Saga pattern to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Saga pattern](https://microservices.io/patterns/data/saga.html).

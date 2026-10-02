@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**AI-assisted software engineering** is a engineering technique in the backend-engineering landscape. Use coding agents for investigation and implementation while retaining human ownership of architecture, verification and production outcomes. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+AI-assisted software engineering uses models to support investigation, implementation and review. The engineer remains responsible for the actual requirement and evidence that the result works.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. AI-assisted software engineering matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use AI-assisted software engineering?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+A plausible patch can misread ownership or satisfy a weak test while breaking real behavior. Faster code generation matters only if verification and maintenance costs remain acceptable.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for AI-assisted software engineering, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For AI-assisted software engineering, the core mechanism is captured by this working definition: Use coding agents for investigation and implementation while retaining human ownership of architecture, verification and production outcomes. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Give the assistant a bounded goal, relevant code and constraints. Ask it to inspect the actual repository, propose or implement a coherent change, then evaluate the diff and run meaningful checks. For uncertain claims, require source or execution evidence. Keep acceptance tied to behavior rather than polished explanation.
 
 ## Key concepts
 
-### Context and contracts
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Nondeterminism and evaluation
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Tool and data boundaries
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Observability and cost
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Human control and security
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Generated confidence is not correctness. Context selection changes results. Tests can be edited to bless the implementation, so their intent needs review. Small changes make defects and unrelated churn easier to detect.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing AI-assisted software engineering because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If AI-assisted software engineering adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+An assistant proposes a query optimization. The engineer captures the old plan, checks result equivalence on skewed data and compares the new plan under representative parameters. A faster synthetic benchmark is rejected when it omits a required tenant filter. The useful outcome is a verified query, not a large rewrite.
 
 ## Trade-offs
 
-AI-assisted software engineering should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Assistance can reduce repetitive work and accelerate exploration. Review, security and learning costs can rise if changes exceed the team's ability to assess them.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting AI-assisted software engineering from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Invented APIs, ignored repository constraints, copied insecure patterns and tests that mirror code rather than requirements are common failures.
 
 ## When to use it
 
-Use AI-assisted software engineering when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use AI for scoped tasks with accessible evidence and affordable verification.
 
 ## When not to use it
 
-Do not use AI-assisted software engineering solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not delegate critical judgment to an output that nobody can inspect or validate.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain AI-assisted software engineering without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: context and contracts, nondeterminism and evaluation, tool and data boundaries, observability and cost, human control and security.
+Frame requirements, review generated changes and obtain independent evidence.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether AI-assisted software engineering belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Set tool access and acceptance practices, measuring delivery quality and rework rather than generated volume.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting AI-assisted software engineering to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [DORA AI research](https://dora.dev/ai/).

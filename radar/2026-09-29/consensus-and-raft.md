@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Consensus and Raft** is a engineering technique in the backend-engineering landscape. Understand quorum, leader election, terms, replicated logs and network partitions. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **assess** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Consensus lets replicas agree on an ordered sequence of decisions despite some node failures. Raft organizes this through leader election, replicated logs and explicit membership rules.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Consensus and Raft matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Consensus and Raft?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Coordination stores often underpin scheduling and configuration. Their behavior during a partition explains why a healthy minority cannot safely continue accepting writes.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Consensus and Raft, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Consensus and Raft, the core mechanism is captured by this working definition: Understand quorum, leader election, terms, replicated logs and network partitions. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+A candidate increments its term and requests votes. A majority elects a leader, which appends entries and replicates them to followers. Entries become committed under Raft's commit rules; the current-term requirement prevents unsafe conclusions about older entries. Followers apply committed entries to a deterministic state machine. Election timeouts detect missing leaders without proving they are dead.
 
 ## Key concepts
 
-### Problem and invariant
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### State and ownership
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Concurrency and failure
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Operational feedback
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Evolution and maintainability
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Terms distinguish leadership epochs. Quorum intersection protects committed history. Log matching and election restrictions preserve safety. Membership changes require a safe protocol, not arbitrary replacement of a majority. Snapshots compact applied history.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Consensus and Raft because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Consensus and Raft adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A five-node configuration cluster splits into groups of three and two. The majority can elect a leader and commit updates; the minority cannot. Clients reaching the minority see unavailability rather than conflicting configuration histories. Recovery rejoins the logs before serving consistent state.
 
 ## Trade-offs
 
-Consensus and Raft should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Consensus simplifies agreement but adds replication latency and loses write availability without a quorum. It does not make all reads linearizable unless the read protocol establishes the required freshness.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Consensus and Raft from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Correlated node placement, slow durable writes, unsafe membership changes and reading stale followers can undermine expectations. Consensus cannot coordinate an external side effect merely because a decision is logged.
 
 ## When to use it
 
-Use Consensus and Raft when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use a proven consensus implementation for coordination state requiring consistent ownership or ordering.
 
 ## When not to use it
 
-Do not use Consensus and Raft solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not implement Raft casually or route high-volume independent application data through one coordination log.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Consensus and Raft without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: problem and invariant, state and ownership, concurrency and failure, operational feedback, evolution and maintainability.
+Explain majority failure tolerance, leader changes and linearizable versus stale reads.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Consensus and Raft belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Design failure-domain placement, membership operations and recovery without sacrificing quorum safety.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Consensus and Raft to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Raft paper](https://raft.github.io/raft.pdf).

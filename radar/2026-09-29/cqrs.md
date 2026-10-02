@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**CQRS** is a engineering technique in the backend-engineering landscape. Understand separating command and query models and the consistency and operational complexity it introduces. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **assess** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Command Query Responsibility Segregation separates the model used to change state from the model used to read it. It can be a code-level separation or distinct storage and asynchronous projections.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. CQRS matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use CQRS?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+A transaction model designed for integrity may be awkward for search or dashboards. CQRS makes this mismatch explicit without requiring event sourcing or microservices.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for CQRS, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For CQRS, the core mechanism is captured by this working definition: Understand separating command and query models and the consistency and operational complexity it introduces. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Commands validate intent and update the authoritative write model. Queries read a representation optimized for their access patterns. When separate stores are used, committed changes update projections synchronously or through durable events/CDC. The design must define projection lag and how users observe their own recent commands.
 
 ## Key concepts
 
-### Context and contracts
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Nondeterminism and evaluation
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Tool and data boundaries
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Observability and cost
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Human control and security
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+A command is a requested action, not an event reporting a fact. Projections need rebuild and schema migration procedures. Idempotent updates and source versions prevent replay from duplicating or regressing query state.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing CQRS because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If CQRS adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A claims system keeps normalized claim and assessment tables for writes but builds a searchable case summary for investigators. After an assessment changes, the UI displays a pending refresh state until the projection catches up. Replay reconstructs summaries without resending customer emails.
 
 ## Trade-offs
 
-CQRS should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Independent read models improve query flexibility and scaling. Separate stores introduce staleness and operational work; code-level separation is cheaper and often sufficient.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting CQRS from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Treating the query store as authoritative, lacking rebuilds and forcing every CRUD entity through a command bus add fragility or ceremony.
 
 ## When to use it
 
-Use CQRS when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use CQRS when write invariants and read shapes differ enough to justify separate models.
 
 ## When not to use it
 
-Do not use CQRS solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+A straightforward application with modest queries usually benefits from one model and one database.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain CQRS without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: context and contracts, nondeterminism and evaluation, tool and data boundaries, observability and cost, human control and security.
+Define write authority, projection update semantics and read-after-write behavior.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether CQRS belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Decide whether benefits justify synchronization infrastructure and manage projection ownership across teams.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting CQRS to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Martin Fowler on CQRS](https://martinfowler.com/bliki/CQRS.html).

@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**API gateway pattern** is a engineering technique in the backend-engineering landscape. Understand routing, authentication, policy enforcement, rate limiting and aggregation at service boundaries. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **adopt** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+An API gateway is an entry layer that routes client requests to backend services and applies boundary policies. It presents a controlled external surface over internal service topology.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. API gateway pattern matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use API gateway pattern?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+Clients should not need every internal address or security mechanism. Central routing and authentication can help, but an overloaded gateway can affect otherwise independent services.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for API gateway pattern, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For API gateway pattern, the core mechanism is captured by this working definition: Understand routing, authentication, policy enforcement, rate limiting and aggregation at service boundaries. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+The gateway terminates supported protocols, selects upstream routes and applies policies such as token validation, request-size limits and rate limits. Some gateways aggregate responses. Services still enforce resource-level authorization and business constraints; gateway admission does not prove a caller may access a particular record.
 
 ## Key concepts
 
-### Problem and invariant
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### State and ownership
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Concurrency and failure
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Operational feedback
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Evolution and maintainability
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Routing, authentication and aggregation have different resource costs. Forwarded client identity must resist spoofing. Timeout budgets include upstream calls. Gateway policy configuration deserves deployment review and rollback.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing API gateway pattern because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If API gateway pattern adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A partner API exposes customer reports through a gateway. It validates tokens and caps upload size, then forwards a trusted identity representation. The report service independently checks tenant ownership. A slow analytics route gets separate concurrency limits so it cannot exhaust connections used by basic account endpoints.
 
 ## Trade-offs
 
-API gateway pattern should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+A shared boundary simplifies policy and client contracts. It adds a hop and central configuration blast radius; extensive aggregation can turn the gateway into a tightly coupled business service.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting API gateway pattern from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Blindly trusting forwarded headers, putting all authorization at ingress, unlimited buffering and global timeouts cause security or availability failures.
 
 ## When to use it
 
-Use API gateway pattern when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Use a gateway for external APIs or a justified client-facing boundary with shared policies.
 
 ## When not to use it
 
-Do not use API gateway pattern solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not route every internal call through one central component without a concrete requirement.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain API gateway pattern without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: problem and invariant, state and ownership, concurrency and failure, operational feedback, evolution and maintainability.
+Configure routes, identity forwarding, upstream budgets and observability by route.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether API gateway pattern belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Define gateway ownership and separate boundary policy from domain behavior.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting API gateway pattern to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [API gateway pattern](https://microservices.io/patterns/apigateway.html).

@@ -7,87 +7,46 @@ tags: [backend]
 
 ## What it is
 
-**Temporal** is a platform in the backend-engineering landscape. Explore durable workflow execution and compare it with queues, sagas and hand-built state machines. The important goal is not memorizing terminology; it is understanding the problem it solves, the guarantees it can and cannot provide, and the operational consequences of introducing it into a production system.
-
-Its placement in **trial** reflects the depth of engagement expected in this radar, not a claim that every system should adopt it.
+Temporal runs durable workflows by recording execution history and replaying workflow code after failures. Workers host application code; the service retains the history and schedules tasks.
 
 ## Why it matters for backend engineers
 
-Backend engineers work at boundaries where data, concurrency, networks and external dependencies meet. Temporal matters because decisions in this area affect one or more of correctness, latency, availability, scalability, security, operability and cost.
-
-A useful engineering question is therefore not “Do we use Temporal?” but “What concrete requirement would justify it, what simpler alternative exists, and how will we know it is working in production?”
+It can replace fragile chains of queues and database flags for long-running processes. Its replay model also imposes rules that ordinary request handlers do not have.
 
 ## How it works
 
-Start from the system invariant and the flow of state. Identify the producer or caller, the component responsible for Temporal, the durable state involved, and the consumer or downstream dependency. Then follow one successful operation and one failed operation end to end.
-
-For Temporal, the core mechanism is captured by this working definition: Explore durable workflow execution and compare it with queues, sagas and hand-built state machines. In practice, implementation details vary by product, but the reasoning pattern stays consistent: define ownership, bound resource use, make failure explicit, instrument the important transitions, and design recovery before production traffic exposes the missing path.
-
-Do not evaluate the mechanism in isolation. Its behavior changes when combined with retries, concurrency, autoscaling, caching, replication, deployment and partial failure.
+Workflow code makes deterministic decisions and schedules activities, timers or child workflows. Replay uses recorded activity results rather than reexecuting completed activities. Activities perform I/O and may retry; their external effects require idempotency. Signals and updates interact with running workflows under their documented semantics.
 
 ## Key concepts
 
-### Ordering and partitioning
-Understand what is being protected or optimized and which business or technical invariant must remain true.
-
-### Delivery, acknowledgement and replay
-Know where state lives, who owns it, and what guarantees are visible to callers or consumers.
-
-### Consumer state and idempotency
-Reason about simultaneous operations, saturation and partial failure rather than only the happy path.
-
-### Backpressure and failure handling
-Know which metrics, logs, traces or administrative signals show healthy and unhealthy behavior.
-
-### Schema and contract evolution
-Plan for compatibility, migration and changing scale. A production design is rarely static.
+Task queues route work to workers. Workflow IDs define execution identity. Activity timeouts cover distinct phases, while heartbeats help detect stalled long activities. Continue-As-New starts a new run to bound history. Versioning protects old executions as code changes.
 
 ## Production example
 
-Imagine a high-traffic order and fulfillment platform introducing Temporal because the existing path is showing a measurable limitation. The team first records the baseline: throughput, p95/p99 latency, error rate, resource saturation and the business symptom. It then introduces the change behind a controlled rollout rather than replacing the existing path globally.
-
-During rollout, engineers test normal traffic, duplicate or concurrent work, a slow dependency, process restart and a downstream outage. They verify not only that requests succeed, but that state remains correct and recovery is bounded. Observability distinguishes application failure from dependency failure and exposes any queueing or saturation created by the new design.
-
-The change is expanded only when the measured result supports the original requirement. If Temporal adds complexity without improving the relevant constraint, the simpler architecture remains preferable.
+A subscription renewal waits until the renewal date, charges through an activity and then updates entitlements. The worker crashes after the provider charges. Retrying the activity with the renewal's original idempotency key avoids another charge. The workflow resumes from durable history, not from a new subscription request.
 
 ## Trade-offs
 
-Temporal should be evaluated across several dimensions. **Correctness:** does it strengthen guarantees or introduce new consistency windows? **Latency:** does it add network hops, coordination, serialization or queueing? **Availability:** what happens when one dependency is unavailable? **Scalability:** what resource becomes the next bottleneck? **Operability:** can engineers observe, debug, migrate and recover it? **Cost:** what are the infrastructure and engineering costs over several years?
-
-A design can be technically scalable and still be a poor choice if it increases operational load or organizational coupling more than the product requires.
+Durable timers and retries simplify process recovery. Temporal adds an execution platform, history limits and deterministic-code discipline.
 
 ## Failure modes / pitfalls
 
-The first pitfall is adopting Temporal from a reference architecture without reproducing the constraints that justified it. Another is testing only successful requests and discovering recovery semantics during an incident.
-
-Watch for hidden unbounded resources, ambiguous ownership, retries that duplicate side effects, incompatible changes, stale state, weak observability, capacity assumptions based only on averages, and configuration copied from another workload.
-
-Treat operational simplicity as a feature. If two designs meet the requirement, prefer the one with fewer independent failure modes and clearer ownership.
+Calling network APIs or reading nondeterministic time directly in workflow code can break replay. Large payloads inflate history. Activity retries do not make arbitrary effects unique.
 
 ## When to use it
 
-Use Temporal when a concrete requirement matches the problem described above, the team understands its failure model, and simpler alternatives have been evaluated. Define success criteria before adoption and introduce it incrementally where possible.
-
-For established technology, “use it” still does not mean “use every feature.” Adopt the smallest subset that satisfies the requirement and preserve a clear escape or migration path.
+Evaluate Temporal for long-lived, failure-prone workflows with timers and complex recovery.
 
 ## When not to use it
 
-Do not use Temporal solely because it is popular, appears in another company's architecture, or makes a design look more sophisticated. Avoid it when the expected scale or consistency requirement can be handled safely by a simpler local mechanism.
-
-Also avoid introducing a new operational dependency when the organization cannot yet monitor, upgrade, secure and recover it reliably.
+Do not introduce it for one inexpensive stateless job or treat it as a replacement for transactional data modeling.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should be able to explain Temporal without vendor marketing language, identify the problem it solves, describe its main mechanics and guarantees, and compare it with at least one simpler alternative.
-
-They should be able to implement or operate the common production path, choose safe defaults, instrument it, diagnose typical failures and reason about concurrency, retries, resource limits and recovery. In design review, they should challenge assumptions with workload evidence and make trade-offs explicit.
-
-For this blip specifically, a Senior Engineer should be comfortable with: ordering and partitioning, delivery, acknowledgement and replay, consumer state and idempotency, backpressure and failure handling, schema and contract evolution.
+Separate workflow decisions from activities; test replay and idempotent activity retries.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should decide whether Temporal belongs in the architecture at all. That requires reasoning across services, teams and years rather than optimizing one implementation.
+Plan worker versioning, platform ownership, retention and migration of long-running executions.
 
-They should understand second-order effects: new ownership boundaries, platform requirements, migration cost, security posture, failure-domain changes, developer cognitive load and how the choice constrains future systems. They should define organization-level guardrails where useful while leaving teams room to choose simpler solutions.
-
-At Staff level, the key capability is not deeper configuration knowledge alone. It is connecting Temporal to business invariants, system architecture, organizational structure and long-term operational cost.
+Further reading: [Temporal documentation](https://docs.temporal.io/).
