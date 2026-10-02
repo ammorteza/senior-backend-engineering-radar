@@ -1,5 +1,7 @@
 # Repository-wide editorial audit — 2026-10-02
 
+> Historical report: this pass was subsequently found to be too shallow. Its completion claim is not teaching-quality acceptance. See the [current, incomplete teaching-depth review](teaching-depth-review-2026-10-02.md) for accurate progress.
+
 Reviewed all **148 blips** in `radar/2026-09-29/`: **125 rewritten**, **2 narrowly corrected**, **21 preserved byte-for-byte**. Blip IDs, front matter, rings, tags, quadrants and portable exports were retained.
 
 The rewritten articles replace repeated generic prose and unrelated key concepts with subject-specific mechanics, distinct illustrative production scenarios, concrete limitations and role expectations. Examples teach plausible production situations; they do not claim undocumented personal experience or measured project results.

@@ -30,7 +30,7 @@ This radar is reviewed **twice per week, every Tuesday and Friday**. Each review
 
 The goal is to keep the radar useful as a living Senior-to-Staff learning resource. Existing articles may therefore be expanded or rewritten as better explanations, production lessons and ecosystem changes emerge.
 
-The [2026-10-02 editorial audit](docs/editorial-audit-2026-10-02.md) records the review outcome for all 148 blips, including rewritten articles, narrow corrections and articles preserved unchanged.
+The [teaching-depth review](docs/teaching-depth-review-2026-10-02.md) is in progress: 13 articles have been expanded and reread, with 135 still pending. The [earlier editorial audit](docs/editorial-audit-2026-10-02.md) removed repeated prose but did not establish sufficient teaching depth.
 
 ## 20-minute daily routine
 
