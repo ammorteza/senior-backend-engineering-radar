@@ -7,78 +7,92 @@ tags: [backend]
 
 ## What it is
 
-The Domain Name System maps human-readable names to network information and forms part of the control plane of almost every backend system. DNS is hierarchical, distributed and heavily cached.
+The Domain Name System (DNS) maps names to records such as IP addresses, aliases, mail routes, and service metadata. It is a distributed hierarchical naming system with recursive resolvers, authoritative name servers, delegation, and caching.
 
-It is not merely a directory that converts a hostname into one permanent IP address.
+For backend engineers, DNS is a control-plane dependency. A hostname such as `db.internal.example` is only stable at the application layer; the addresses behind it can change, answers can be cached for different lengths of time, and different networks can intentionally receive different answers.
 
 ## Why it matters for backend engineers
 
-Service discovery, database endpoints, third-party APIs, CDNs and cloud load balancers commonly depend on DNS. A DNS problem can therefore look like an application outage even when every application process is healthy.
+Nearly every service depends on DNS indirectly: managed databases, external APIs, Kubernetes Services, load balancers, CDNs, and package registries all rely on name resolution.
 
-TTL behavior also affects migrations and failovers. Changing a DNS record does not instantly change what every client uses.
+A DNS problem often looks like an application problem. One instance may keep using an old address while another resolves the new target. A negative answer can remain cached after a record is created. Existing TCP connections can continue using an old endpoint even after every resolver has learned the new address.
+
+Understanding DNS prevents unsafe assumptions such as “we changed the record, so traffic moved immediately.”
 
 ## How it works
 
-A client typically asks a recursive resolver for a name. The resolver may answer from cache or follow the DNS hierarchy toward authoritative name servers. Responses have TTLs that control caching.
+A client typically asks a local stub resolver, which sends the query to a recursive resolver. If the recursive resolver has a valid cached answer, it returns it. Otherwise it follows the DNS hierarchy: root servers point toward the relevant top-level domain, delegation points toward authoritative servers, and the authoritative server returns records for the zone.
 
-Different record types represent different information: A and AAAA map names to addresses, CNAME aliases names, and records such as TXT, MX and SRV support other use cases.
+Answers carry TTL values that limit how long caches may reuse them. Multiple caching layers can exist: the operating system, language runtime, local DNS forwarder, container platform, corporate resolver, and recursive service. The effective application behavior depends on all of them.
 
-Applications rarely implement this resolution directly; operating systems, runtimes, containers and service-discovery systems add their own caching and behavior.
+Common records include `A` for IPv4 addresses, `AAAA` for IPv6, `CNAME` for aliases, `MX` for mail exchange, `TXT` for arbitrary text used by many protocols, and `SRV` for service/location information. CNAMEs add another lookup and cannot be used everywhere a record is allowed.
+
+Negative responses such as NXDOMAIN can also be cached according to DNS rules. Creating a record immediately after clients queried a nonexistent name can therefore produce a period where some clients continue seeing failure.
 
 ## Key concepts
 
-### Recursive and authoritative DNS
-Recursive resolvers obtain answers for clients. Authoritative servers publish the records for a zone.
+**Recursive resolver versus authoritative server.** A recursive resolver answers clients and performs lookups. An authoritative server publishes the zone's data. Their logs and failure modes are different.
 
-### TTL
-TTL controls how long an answer may be cached. Lower TTLs improve change propagation at the cost of more resolution traffic.
+**TTL.** TTL is a maximum cache lifetime for a record under normal behavior, not a guaranteed refresh moment. Lowering it after clients cached a high value does not shorten those already cached answers.
 
-### Positive and negative caching
-Successful answers and some failures can both be cached.
+**Delegation.** Parent zones point to authoritative servers for child zones. Incorrect NS/glue configuration can break resolution even when the final record looks correct in one management console.
 
-### A, AAAA and CNAME
-These common records represent IPv4, IPv6 and aliases respectively.
+**Split-horizon DNS.** The same name can intentionally resolve differently inside and outside a network. Debugging must use the same resolver context as the failing workload.
 
-### Split-horizon DNS
-The same name may resolve differently depending on network or resolver context.
+**Name resolution versus connection lifetime.** DNS affects new resolutions. A client with a long-lived existing connection may continue talking to the old address until it reconnects.
 
-### Service discovery
-Platforms such as Kubernetes frequently use DNS names as a stable interface over dynamic endpoints.
+**Search paths.** Systems can append search suffixes to short names. This is convenient inside clusters but can create extra queries or surprising matches. Prefer fully qualified names at important boundaries.
 
 ## Production example
 
-A team migrates an API from one load balancer to another and changes its DNS record. Some clients immediately use the new endpoint while others continue reaching the old one.
+A team migrates `api.example.com` from load balancer A to load balancer B. The current TTL is one hour. Ten minutes before cutover they lower the TTL to 30 seconds and assume every client will update quickly.
 
-The cause is not inconsistent deployment: resolvers and application processes still hold valid cached answers. A safe migration keeps the old destination healthy for at least the relevant caching window, lowers TTL ahead of planned cutover when appropriate, and observes traffic on both endpoints.
+That does not work: resolvers that cached the old one-hour answer before the change are allowed to keep it until the original TTL expires. Some application processes also retain connections to A.
+
+A safer migration starts earlier. At least one old-TTL window before cutover, the team lowers the TTL and confirms the new value is visible from representative resolvers. Both load balancers remain healthy during overlap. At cutover, the record changes to B, but A continues serving correctly while cached answers drain.
+
+The team monitors request volume at both destinations and tests public, corporate, and internal resolver paths. Only after old traffic approaches zero and the relevant connection/TTL windows pass does it decommission A.
+
+If the migration is an emergency failover, the team accepts that DNS is not an instantaneous global switch. It may combine DNS with a load-balancing layer or anycast/edge routing whose failover behavior better matches the objective.
 
 ## Trade-offs
 
-DNS gives stable names over changing infrastructure and distributes resolution efficiently through caching. The same caching makes immediate global changes impossible.
+DNS gives applications stable names while infrastructure changes and distributes lookup load efficiently through caching. Caching is also what makes coordinated instant changes impossible.
 
-Very low TTLs can increase resolver dependency and query volume. Very high TTLs make migrations and incident response slower.
+Very low TTLs reduce stale-answer duration but increase resolver traffic and dependence on authoritative availability. Very high TTLs reduce lookup traffic but extend migration and recovery windows.
+
+Complex alias chains can simplify ownership delegation but increase query latency and the number of records that can fail.
 
 ## Failure modes / pitfalls
 
-Common problems include expired or incorrect records, stale caches, resolver outages, CNAME chains, incorrect search domains, negative caching and assuming DNS-based load distribution gives precise traffic control.
+Lowering TTL too late is a classic mistake. So is testing only with a laptop that uses a different resolver from production.
 
-Kubernetes adds another class of mistakes: confusing a service's DNS identity with the lifecycle of individual pods.
+Deleting a record before creating its replacement can cause negatively cached NXDOMAIN. CNAME loops or long chains cause resolution failure or extra latency. Private and public zones with the same name can produce confusing split-horizon behavior.
+
+Applications that resolve once at startup may never discover endpoint changes. Others re-resolve correctly but keep stale pooled connections. Diagnose DNS, client caching, and connection reuse separately.
 
 ## When to use it
 
-Use DNS as the normal naming layer for network services and as one component of service discovery, failover and traffic architecture.
+Use DNS as the normal naming layer for services and public endpoints, and as one component of service discovery and traffic management.
+
+Design planned migrations around observed resolver behavior and the previous TTL, not only the new record value.
 
 ## When not to use it
 
-Do not treat DNS as a transactional coordination mechanism or assume it can perform instantaneous failover. Fine-grained traffic management often belongs in a load balancer, proxy or service-routing layer.
+Do not use DNS as a transactional coordination system or assume all clients will observe one change simultaneously.
+
+Do not rely on DNS round-robin alone for precise request balancing, per-request health decisions, or rapid draining; a load balancer or service proxy is better suited to those tasks.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should understand resolution flow, TTLs, common record types, caching and how to investigate resolution with tools such as dig or nslookup.
+A Senior Engineer should understand recursive and authoritative resolution, delegation, common records, positive/negative caching, TTLs, search paths, and application-level DNS caching.
 
-They should include DNS in incident hypotheses when name resolution or endpoint changes are involved.
+They should use tools such as `dig` against the same resolver path as production, inspect TTLs and authoritative answers, and correlate them with active connections.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should design migrations and failover around caching behavior, understand DNS ownership and blast radius, and reason about public versus private resolution, multi-region routing and service discovery.
+A Staff Engineer should design DNS ownership, public/private zones, migrations, multi-region failover, and provider dependencies with explicit cache windows and blast radius.
 
-They should avoid architectures whose correctness depends on all clients observing a DNS change at the same moment.
+They should ensure critical recovery plans do not depend on every client resolving a new address immediately and should provide platform defaults that make service discovery refresh behavior predictable.
+
+Further reading: [RFC 1034: Domain Names — Concepts and Facilities](https://www.rfc-editor.org/rfc/rfc1034), [RFC 1035: Domain Names — Implementation and Specification](https://www.rfc-editor.org/rfc/rfc1035).

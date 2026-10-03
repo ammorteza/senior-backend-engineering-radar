@@ -7,75 +7,88 @@ tags: [backend]
 
 ## What it is
 
-Rate limiting controls how much work a caller or system may introduce over time. Backpressure is the broader mechanism by which downstream capacity constrains upstream production.
+Rate limiting controls how much new work a caller or workload may introduce over time. Backpressure is the broader feedback by which downstream capacity constrains upstream production so work does not accumulate without bound.
 
-Both exist to keep systems inside safe operating limits instead of accepting more work than they can process.
+The two are related but different. A token bucket can cap request rate even when the service is healthy; a bounded queue or flow-control signal applies backpressure when actual processing cannot keep up.
 
 ## Why it matters for backend engineers
 
-Overload is inevitable. Traffic spikes, slow dependencies, hot tenants and recovery after outages can all make incoming work exceed capacity.
+Traffic spikes, hot tenants, slow dependencies, and backlog recovery can all make incoming work exceed sustainable capacity. If the system keeps accepting work, queue age and memory rise until latency explodes or components fail.
 
-Without backpressure, queues and memory grow, latency explodes and eventually healthy components fail. A well-designed system rejects or slows work before reaching that point.
+Autoscaling is not a universal solution. A worker fleet cannot scale past a fixed provider quota or a database's write capacity. Reliable systems reject, delay, or degrade work before saturation becomes collapse.
 
 ## How it works
 
-Rate limiters implement policies such as token bucket, leaky bucket or fixed/sliding windows. Limits may apply globally, per tenant, per user, per endpoint or against a downstream dependency.
+A **token bucket** accumulates tokens at a configured rate up to a burst capacity. Requests consume tokens; when none remain, the caller waits or is rejected. This models steady rate plus bounded bursts.
 
-Backpressure can appear as bounded queues, concurrency limits, flow-control signals, broker consumer limits or explicit rejection. The essential idea is that the producer must eventually feel the consumer's capacity constraint.
+A **concurrency limiter** bounds simultaneous expensive operations. It often matches resource pressure better than requests per second when request duration varies.
+
+Backpressure appears through bounded queues, broker prefetch limits, stream flow control, worker concurrency, and explicit admission errors. The producer must eventually feel that the consumer is full.
+
+Limits can be global, per tenant, per endpoint, or per downstream account. In a multi-replica service, per-process limits do not automatically enforce a global provider quota. Use a shared limiter, partition quota deliberately, or size local limits so the fleet total is safe.
 
 ## Key concepts
 
-### Token bucket
-Tokens accumulate at a configured rate up to a burst capacity. Each operation consumes a token.
+**Burst capacity.** Allows short peaks without changing the long-run rate. A burst larger than the dependency's queue capacity defeats the protection.
 
-### Concurrency limit
-Instead of limiting requests per second, the system bounds simultaneous work, which often maps more directly to scarce resources.
+**Queue age versus depth.** Depth counts jobs; age tells how long the oldest work has waited. Different job sizes can make depth misleading.
 
-### Bounded queue
-A finite queue forces an explicit decision when capacity is exhausted.
+**Fairness.** Per-tenant or weighted limits prevent one noisy tenant from consuming all shared capacity.
 
-### Load shedding
-Noncritical or excess work is rejected so the system can continue serving higher-value traffic.
+**Load shedding.** Reject work when accepting it would make useful work miss deadlines. Fast rejection can preserve capacity for high-value requests.
 
-### Fairness
-Per-tenant or weighted limits prevent one workload from consuming all shared capacity.
+**Retry-After / retry guidance.** A client should not immediately retry a rate-limit response and recreate the same overload.
 
 ## Production example
 
-An API accepts jobs that are processed by workers calling an external provider limited to 500 requests per second. Increasing workers cannot increase provider capacity.
+A worker service sends data to an external API limited to 500 operations per second for the entire account. The fleet has 20 replicas.
 
-The system applies a provider-aware limiter, bounds queued jobs, exposes queue age and rejects or delays low-priority work before memory grows without limit. Higher-priority traffic receives reserved capacity.
+If every replica independently permits 500 requests per second, the account can receive up to 10,000 attempts per second. The limiter must therefore coordinate globally or allocate safe shares that account for replica count and failover.
+
+The team uses a shared account-level token budget and separately caps active calls to protect connection and memory use. Queue admission is bounded by a promised completion window; low-priority bulk work is rejected or deferred when oldest-job age approaches that window.
+
+Interactive work receives reserved capacity. Recovery after a provider outage ramps gradually rather than releasing the entire backlog at 500 rps plus new traffic with no prioritization.
+
+Metrics include admitted/rejected work, token wait, active concurrency, queue age, downstream 429s, and completion latency per priority/tenant.
 
 ## Trade-offs
 
-Strict limits protect reliability but may reject legitimate bursts. Large burst allowances improve responsiveness but can overload dependencies.
+Strict limits protect reliability but can reject legitimate bursts. Larger burst allowances improve responsiveness while increasing risk to the dependency.
 
-Queueing can smooth short spikes but increases latency and hides overload if queue depth is treated as unlimited capacity.
+Queueing smooths short mismatches but adds latency. Priority/fairness improves product behavior while making scheduling more complex.
+
+A globally coordinated limiter enforces exact shared capacity more directly but adds dependency and coordination cost. Conservative local shares are simpler but may leave capacity unused.
 
 ## Failure modes / pitfalls
 
-Typical mistakes include unbounded queues, limits that exist independently on every replica, no tenant fairness, retrying rate-limit responses immediately, and measuring only queue length rather than queue age.
+Per-replica limits accidentally multiply with autoscaling. Unbounded queues convert overload into latency and memory/disk growth. Clients that retry 429 immediately defeat the limiter.
 
-Another pitfall is scaling consumers against a downstream system whose capacity cannot scale.
+One tenant can monopolize a global queue unless fairness exists. Scaling consumers against a fixed downstream quota increases contention without throughput.
+
+Another mistake is measuring only throughput: a service can complete 500 rps while queue age grows forever because arrivals are 700 rps.
 
 ## When to use it
 
-Use rate limiting at public boundaries, expensive operations, shared dependencies and any place demand can exceed a known capacity.
+Use rate limiting at public boundaries, expensive operations, shared dependencies, and any place demand can exceed known capacity.
 
-Use backpressure throughout asynchronous pipelines and bounded worker systems.
+Use backpressure through every asynchronous pipeline so overload becomes visible upstream before resources are exhausted.
 
 ## When not to use it
 
-Do not use arbitrary rate limits to conceal a capacity problem without understanding the bottleneck. Some workloads are better governed by concurrency or resource budgets than requests per second.
+Do not choose arbitrary requests-per-second limits when concurrency, bytes, CPU, or another resource predicts saturation better.
+
+Do not use limits to conceal a permanent capacity shortfall. If normal demand exceeds sustainable service, architecture or product capacity must change.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should understand token-bucket style limiting, bounded queues, concurrency controls, 429 semantics, Retry-After behavior and how to monitor saturation.
+A Senior Engineer should understand token buckets, concurrency limits, bounded queues, fairness, overload responses, and multi-replica quota math.
 
-They should design overload behavior explicitly.
+They should design recovery traffic and monitor queue age, saturation, and rejection separately.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should allocate capacity across tenants and priorities, model overload across complete pipelines and design admission control at the correct boundary.
+A Staff Engineer should allocate scarce capacity across tenants, priorities, and recovery work and choose where global versus local admission control belongs.
 
-They should establish how systems degrade when total demand exceeds business capacity instead of assuming autoscaling will always solve overload.
+They should define organization-wide overload behavior so teams do not assume autoscaling or retries can create capacity that a fixed downstream system does not have.
+
+Further reading: [Google SRE: Handling overload](https://sre.google/sre-book/handling-overload/).

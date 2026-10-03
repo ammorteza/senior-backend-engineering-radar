@@ -7,46 +7,90 @@ tags: [backend]
 
 ## What it is
 
-Terraform and OpenTofu manage infrastructure by comparing declared configuration, stored state and provider-observed resources. They share a lineage but must be evaluated as distinct tools with versioned compatibility.
+Terraform and OpenTofu are declarative infrastructure-as-code tools that compare configuration, stored state, and provider-observed resources to plan and apply infrastructure changes.
+
+OpenTofu originated from Terraform's open-source codebase, but they are now independently versioned tools. Treat syntax and provider compatibility as versioned facts rather than assume permanent interchangeability.
 
 ## Why it matters for backend engineers
 
-Infrastructure changes can replace databases or widen permissions. A reviewed plan makes those consequences visible before execution, provided it matches the state and configuration actually applied.
+Infrastructure changes can delete or replace databases, rotate load balancers, and widen IAM. The plan is a critical safety artifact because it translates a small configuration edit into provider API consequences.
+
+That plan is trustworthy only for the configuration, provider versions, variables, and state from which it was created. Applying later after state or inputs changed can produce different consequences.
 
 ## How it works
 
-Providers expose resource operations. Planning builds a dependency graph and proposes changes; applying calls provider APIs and updates state. State maps configuration addresses to real resources and can contain sensitive values. Remote state and locking reduce concurrent-write risks but do not eliminate drift or stale plans.
+Configuration declares resources and relationships. Providers implement the operations needed to read, create, update, and delete real infrastructure.
+
+State maps resource addresses in configuration to remote object identities and stores attributes needed for planning. Remote state backends and locking reduce simultaneous-write risk, but state remains sensitive and operationally critical.
+
+The planning phase refreshes or reads relevant resource state and computes a proposed dependency graph of changes. Apply executes provider operations in dependency order and records resulting state.
+
+Resource renames are important: changing only a configuration address can look like “delete old, create new.” Supported moved-block or state-migration mechanisms preserve identity when the intention is a refactor.
+
+Provider and tool lock files stabilize versions. Modules package repeated infrastructure interfaces, but a module upgrade can still change many resources and must be planned and reviewed.
 
 ## Key concepts
 
-Modules package declarations. Lifecycle settings influence replacement behavior. Imports adopt existing resources; moved-resource declarations preserve identity across refactors where supported. Provider and tool version locks reduce unexpected planning changes.
+**State.** The tool's mapping from configuration addresses to real infrastructure. Protect encryption, access, backup, and locking.
+
+**Plan.** A proposed change set, not a timeless approval. Store or regenerate under controlled inputs.
+
+**Drift.** Remote infrastructure differs from declared configuration due to manual or external changes.
+
+**Replacement.** Some attribute changes cannot update in place and cause destroy/create behavior. Review replacement of stateful resources carefully.
+
+**Import and moved resources.** Adopt existing objects or preserve identity across refactors without unintended recreation.
+
+**Lifecycle controls.** Options such as prevent-destroy or create-before-destroy change behavior but do not substitute for understanding provider semantics.
 
 ## Production example
 
-A team renames a database resource in configuration. Without identity migration, the plan proposes destruction and recreation. A reviewed moved/import procedure preserves the existing instance. CI stores the approved plan and applies it under restricted credentials, while independent drift checks identify manual console changes.
+A team wants to rename a PostgreSQL resource from `aws_db_instance.main` to `aws_db_instance.orders` to match service naming.
+
+A naive configuration rename produces a plan showing one database destroyed and another created. Because the physical database must remain, the team uses the tool's supported moved-resource mechanism to preserve identity.
+
+CI pins tool and provider versions, initializes against the protected remote state, creates a plan, and surfaces resource replacements explicitly. The approved plan is applied under a restricted deployment identity.
+
+A separate drift job detects a manual console change to the database parameter group. Engineers decide whether to codify or revert it instead of letting the next unrelated apply discover it unexpectedly.
+
+For schema/data migrations, Terraform changes infrastructure only; application migration tooling owns data compatibility. The team does not put irreversible row rewrites into provisioner scripts hidden inside infrastructure apply.
 
 ## Trade-offs
 
-Declarative plans improve repeatability. State, provider behavior and external APIs add failure modes; a successful apply is not proof that applications remain healthy.
+Declarative infrastructure gives reviewable repeatability and dependency tracking. State and provider behavior add another control plane whose failure can block changes.
+
+Modules reduce duplication but can hide dangerous defaults if their interface is too broad. Central modules improve policy consistency while increasing coordination for changes.
 
 ## Failure modes / pitfalls
 
-Plaintext state exposure, concurrent applies, broad credentials and accepting replacement plans casually can cause serious incidents. Tool forks and provider versions are not interchangeable forever.
+State may contain secrets or sensitive attributes. Broad deployment credentials magnify a compromised CI job.
+
+Concurrent or stale applies, unreviewed replacement, and manual state editing can cause serious incidents. `-target` or similar partial operations can be useful recovery tools but can also leave configuration assumptions inconsistent if used casually.
+
+Assuming Terraform and OpenTofu versions or providers remain forever equivalent can break upgrades.
 
 ## When to use it
 
-Use either tool for reviewable cloud infrastructure lifecycle management with explicit state ownership.
+Use Terraform or OpenTofu for infrastructure whose lifecycle benefits from declared, reviewed state and provider integrations.
+
+Use remote protected state and explicit ownership for production stacks.
 
 ## When not to use it
 
-Do not use infrastructure apply as an unreviewed application-data migration mechanism.
+Do not use IaC apply as a generic application data migration engine. Do not force rapidly ephemeral test resources through heavyweight shared state when a simpler lifecycle tool fits better.
+
+Avoid adopting both Terraform and OpenTofu in one organization without an explicit compatibility and ownership reason.
 
 ## What a Senior Engineer should know
 
-Read plans, protect state, understand dependencies and recover interrupted operations.
+A Senior Engineer should read plans, identify replacements, protect state, understand provider/version locks, import or move resource identity, and recover interrupted operations carefully.
+
+They should verify infrastructure changes through application health rather than stop at “apply succeeded.”
 
 ## What a Staff Engineer should understand
 
-Define module contracts, state boundaries and tool upgrade policy across infrastructure owners.
+A Staff Engineer should define state boundaries, module contracts, version upgrade policy, CI authority, drift handling, and emergency change procedures across infrastructure owners.
+
+They should keep the infrastructure abstraction reviewable enough that teams can understand the blast radius of one plan.
 
 Further reading: [Terraform state](https://developer.hashicorp.com/terraform/language/state), [OpenTofu documentation](https://opentofu.org/docs/).

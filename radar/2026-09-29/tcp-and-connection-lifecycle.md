@@ -7,85 +7,90 @@ tags: [backend]
 
 ## What it is
 
-TCP is a reliable, ordered byte-stream transport protocol used underneath much of backend communication, including HTTP/1.1, HTTP/2, PostgreSQL and Redis connections. It hides packet loss and reordering from applications, but it does not make networks instantaneous or failure-free.
+TCP is a reliable, ordered byte-stream transport used underneath many backend protocols, including HTTP/1.1, HTTP/2, PostgreSQL, Redis, and TLS. “Reliable” means TCP retransmits and reorders bytes while the connection remains viable; it does not mean a remote application completed an operation or that a network partition is detected immediately.
 
-Understanding TCP means understanding the lifecycle and cost of connections rather than memorizing packet fields.
+For application engineers, the most useful TCP knowledge concerns connection setup, reuse, failure detection, buffering, and close behavior rather than memorizing every header bit.
 
 ## Why it matters for backend engineers
 
-Many apparent application problems are actually connection problems: intermittent resets, connection-pool exhaustion, latency after deployments, idle connections closed by load balancers, ephemeral-port exhaustion or excessive connection establishment.
+Connection behavior frequently dominates production symptoms. Creating too many connections causes handshake and kernel overhead. Keeping connections indefinitely can leave clients using stale routes. Load balancers and NAT devices can close idle connections without an application knowing until its next write.
 
-A backend engineer who understands TCP can reason about why connection reuse matters, why a timeout does not prove that work failed, and why network latency affects throughput even when CPU is idle.
+A timeout or reset is also ambiguous. The request may never have reached the server, or the server may have committed its effect and the response was lost. TCP cannot answer that business-level question.
 
 ## How it works
 
-A client normally establishes a TCP connection through a handshake. TCP then assigns sequence numbers to bytes, acknowledges received data, retransmits missing data and controls how much data can be in flight.
+A TCP connection is identified by endpoint address/port pairs and begins with a handshake that establishes sequence state. TCP sends a byte stream split into segments, acknowledges received ranges, retransmits missing data, and delivers bytes to the receiving application in order.
 
-Flow control prevents a sender from overwhelming a receiver. Congestion control attempts to avoid overwhelming the network. Closing a connection also has protocol state; sockets can remain in states such as TIME_WAIT after application work is finished.
+**Flow control** protects the receiver: the receiver advertises how much additional data it can buffer. **Congestion control** protects the network by adapting how much unacknowledged data the sender puts in flight.
 
-Applications usually reuse TCP connections because repeatedly creating connections adds round trips, kernel work and, when TLS is involved, cryptographic negotiation.
+Applications need their own message framing because TCP exposes a stream, not message boundaries. One `Write` on the sender does not imply one `Read` on the receiver.
+
+Connections close with protocol state. Active closers can remain in `TIME_WAIT` so delayed packets from an earlier connection are not confused with a new one using the same tuple. Large volumes of short-lived outbound connections can therefore consume ephemeral ports and kernel state.
+
+Persistent clients reuse established connections. Pooling amortizes TCP and TLS handshakes, but pool lifetime, idle timeout, maximum size, and downstream capacity must be coordinated.
 
 ## Key concepts
 
-### Reliable ordered stream
-TCP delivers bytes in order or reports failure. Applications must provide their own message framing.
+**Connect timeout.** Bounds establishment of a new connection. It is different from an overall request deadline or read timeout.
 
-### Retransmission
-Lost packets can be resent. This provides reliability but can increase tail latency.
+**Retransmission.** Packet loss is often hidden from the application but appears as additional latency. Tail latency can rise while average CPU remains low.
 
-### Flow control
-The receiver advertises how much data it can accept.
+**Keepalive versus application heartbeat.** TCP keepalive probes, protocol pings, and domain-level heartbeat messages serve different purposes and operate at different intervals.
 
-### Congestion control
-The sender adapts transmission to network conditions rather than transmitting without bounds.
+**Idle timeout.** A load balancer or NAT may drop an idle mapping sooner than a client library retires it. The next reuse can fail and require reconnect.
 
-### Keepalive and idle timeout
-TCP keepalive, application heartbeats and infrastructure idle timeouts are different mechanisms. Their configuration must be compatible.
+**Half-close and reset.** Closing one direction, orderly FIN shutdown, and abrupt RST behavior are distinct. Applications usually consume these through higher-level library errors.
 
-### Connection reuse
-Pooling and persistent connections amortize setup cost and reduce socket churn.
-
-### TIME_WAIT
-Closed connections can temporarily retain kernel state to prevent old packets from being confused with new connections.
+**Ephemeral ports.** Outbound connections use local ephemeral ports. Rapid connection churn to the same destination can exhaust available tuples before old state expires.
 
 ## Production example
 
-A Go service calls another internal service through an L7 load balancer. After a deployment, errors such as connection reset by peer increase.
+A Go service calls an internal HTTP dependency through an L7 load balancer. After scaling out, connection resets and connect latency increase. Application CPU and the dependency's request latency remain normal.
 
-The application creates a new HTTP client with a new transport for every request, preventing effective connection reuse. Creating only a new client can still share Go's default transport; it is the repeated creation of independent transports that fragments the pool. The load balancer also has an idle timeout shorter than the client's assumptions.
+Metrics show thousands of new TCP connections per second. Code review reveals that each request constructs a new `http.Transport`. Creating a new `http.Client` alone does not necessarily fragment the pool if it shares `http.DefaultTransport`; the independent transports are the important problem.
 
-Using a shared HTTP client and transport, configuring sensible idle-connection settings, and aligning timeouts reduces connection churn and removes many resets. Metrics on connection creation and request phases make the diagnosis visible.
+The service creates one long-lived client/transport per intended upstream configuration and sets bounded idle and total connection behavior. It also discovers that the load balancer closes connections idle for five minutes while the client retains them much longer. Client idle retirement is adjusted so stale connections are less likely to be selected.
+
+A load test measures connection establishment rate, request latency, resets, and open sockets. The team also performs a rolling deployment of the dependency to ensure pooled connections are replaced safely.
+
+Finally, a mutating request is tested with a connection drop after the server commits but before the client reads the response. The client cannot infer rollback from `connection reset by peer`; it resolves the operation through its idempotency/status protocol.
 
 ## Trade-offs
 
-Long-lived connections reduce handshake cost but consume resources and can become stale. Very large pools can overwhelm downstream systems. Very small pools create queueing. Aggressive keepalives detect failures sooner but add traffic.
+Long-lived connections reduce handshake cost and ephemeral-port pressure, but consume file descriptors and downstream connection capacity. Very large pools move queuing into the downstream service; very small pools queue locally.
 
-TCP provides reliability, but head-of-line behavior and connection state have consequences that higher-level protocols must account for.
+Aggressive keepalives and heartbeats detect dead peers sooner at the cost of traffic and battery/network usage. Reusing connections improves efficiency but can make load distribution less even for long-lived connections.
 
 ## Failure modes / pitfalls
 
-Typical problems include leaking response bodies or sockets, creating independent transports per request, pool exhaustion, stale pooled connections, mismatched idle timeouts, connection storms during autoscaling, SYN backlog pressure and assuming a socket write means the remote application committed the operation.
+Creating independent transports or database pools per request causes churn. Leaking response bodies or sockets prevents reuse. Mismatched idle timeouts create intermittent first-request failures on stale connections.
 
-Another pitfall is diagnosing only average latency. Retransmission and network congestion often appear in tail latency.
+Connection storms after autoscaling or failover can overload NAT, TLS termination, or the downstream server even when steady-state traffic is safe. SYN backlog pressure can make new connections fail while existing ones continue.
+
+Do not treat a successful socket write as evidence that the remote application committed, or a read timeout as evidence that it did not.
 
 ## When to use it
 
-TCP is appropriate for reliable bidirectional byte streams and is the transport behind most conventional backend protocols.
+TCP is appropriate for reliable ordered streams and underlies most conventional backend client/server protocols. Engineers normally select a higher-level protocol and then need to understand how its library uses TCP.
 
-The engineering lesson is usually not choosing TCP directly, but understanding the TCP behavior of the protocol or client library you already use.
+Connection metrics belong in the diagnostic toolkit for HTTP, databases, caches, and RPC systems.
 
 ## When not to use it
 
-Do not build custom application protocols over raw TCP when HTTP, gRPC or another established protocol solves the problem. Also recognize protocols built on QUIC/UDP, such as HTTP/3, where TCP-specific assumptions no longer apply.
+Do not create a custom raw-TCP protocol when HTTP, gRPC, or another established protocol already provides framing, tooling, security integration, and compatibility.
+
+Do not carry TCP-specific assumptions into QUIC-based protocols such as HTTP/3 without checking the different transport semantics.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should understand connection establishment, reuse, retransmission, flow control, common socket states, idle timeouts and the relationship between client pools and downstream capacity.
+A Senior Engineer should understand establishment, reuse, flow control, retransmission, common close states, file descriptors, idle timeouts, and pool interactions.
 
-They should be able to diagnose connection resets and distinguish connect timeout, request timeout and application processing timeout.
+They should distinguish DNS resolution, connect time, TLS handshake, server processing, and response transfer when diagnosing latency.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should reason about connection behavior across proxies, service meshes, NAT, load balancers and multi-region paths. They should understand how fleet-wide connection behavior affects downstream capacity and how deployment or failover can create synchronized connection storms.
+A Staff Engineer should reason about fleet-wide connections across proxies, NAT, meshes, load balancers, zones, and regions. They should model failover/redeployment connection storms and set platform defaults that preserve downstream capacity.
 
-They should establish sane transport defaults so every team does not rediscover the same networking failures.
+They should also ensure retry and idempotency designs acknowledge TCP's uncertain-completion boundary instead of treating transport errors as business results.
+
+Further reading: [RFC 9293: Transmission Control Protocol](https://www.rfc-editor.org/rfc/rfc9293).
