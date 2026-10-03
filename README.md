@@ -59,3 +59,5 @@ The deployment workflow builds `build/` and publishes it to GitHub Pages. Expect
 ## Contributing
 
 Suggestions and ring changes are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+Builds use bundled Roboto Latin via `scripts/prepare-local-font.cjs` to avoid a Google Fonts response breaking compilation. The adapter updates the installed generator and its cached builder, and fails explicitly if the upstream layout changes. Font source and license are in `assets/fonts/`.

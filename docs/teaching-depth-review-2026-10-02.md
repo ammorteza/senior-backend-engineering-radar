@@ -64,6 +64,8 @@ Latest pass (2026-10-03): strict build succeeded with 148 entries and 158 genera
 
 The SQL aggregation example was executed against a small SQLite fixture to verify portable join/aggregate behavior, including tenant filtering and missing child rows. This does not validate PostgreSQL-specific execution plans or concurrent transaction behavior; PostgreSQL is not installed in this environment. Those examples were checked against PostgreSQL documentation.
 
+Deployment follow-up: CI twice failed in the upstream Google Fonts URL parser after successful content generation. A small build adapter now uses bundled, licensed Roboto Latin through `next/font/local`; the strict build and rendered-route checks passed again. No article metadata or bodies changed in this follow-up.
+
 Previous security-group validation (2026-10-02):
 
 - Strict build passed: all 148 entries, compilation, lint/type checking and 158 generated static pages.
