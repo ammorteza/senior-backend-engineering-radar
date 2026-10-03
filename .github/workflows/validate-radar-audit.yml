@@ -2,7 +2,7 @@ name: Validate teaching-depth audit
 
 on:
   push:
-    branches: [teaching-depth-audit-2026-10-03]
+    branches: [teaching-depth-audit-2026-10-03, master]
   workflow_dispatch:
 
 permissions:
