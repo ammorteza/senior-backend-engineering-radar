@@ -7,75 +7,86 @@ tags: [backend]
 
 ## What it is
 
-Connection pooling maintains a bounded set of reusable network connections to a dependency such as a database or HTTP service. It avoids repeatedly paying connection-establishment cost and, equally importantly, limits concurrency against the downstream system.
+A connection pool maintains reusable connections to a dependency and limits how many operations can hold them concurrently. Reuse avoids repeated connection setup, authentication and encryption handshakes. The limit also provides a local admission boundary for a downstream system with finite capacity.
 
-A pool is therefore both a performance optimization and a capacity-control mechanism.
+Pooling does not make the dependency faster. Once the database is saturated, increasing the number of simultaneous queries can increase contention and delay every caller. Pool configuration therefore belongs to capacity and latency design, not only client initialization.
 
 ## Why it matters for backend engineers
 
-Poor pool configuration causes some of the most common backend incidents: database connection exhaustion, requests waiting indefinitely for a connection, connection storms after scaling and downstream overload.
+Many apparent database incidents begin before SQL executes. Requests may spend most of their time waiting for a pool slot, while query dashboards show ordinary execution times. Alternatively, each instance can look healthy while the combined fleet exhausts the database's connection limit.
 
-Increasing the pool size is not automatically a fix. It can move queueing from the application into a database that is less able to handle it.
+Autoscaling magnifies the issue. More application instances create more pools, including during rolling-deployment surge. A limit that is safe for one pod says little about its safety across all services and replicas sharing the database.
 
 ## How it works
 
-A caller borrows an existing idle connection or opens a new one until the configured maximum is reached. When all usable connections are busy, additional work waits, times out or fails according to pool behavior.
+A caller requests a connection. The pool reuses an idle one, establishes a new one within its maximum, or waits when the usable maximum is reached. Driver and pool behavior determine how cancellation, failed connections and acquisition timeouts are handled.
 
-Pools typically manage maximum open connections, idle connections, connection lifetime and idle lifetime. HTTP pools have related controls around idle and per-host connections.
+The caller holds the connection while executing work. A transaction normally retains one connection until commit or rollback. Streaming query results may also keep a connection occupied until rows are consumed or closed. The service must release these resources on error and early-return paths, not just after success.
 
-Pool sizing should follow workload concurrency, dependency capacity and latency. Little's Law provides a useful mental model: concurrency is approximately throughput multiplied by time in the system.
+Idle limits control how many connections remain ready. Lifetime and idle-time settings retire connections to accommodate infrastructure policies and avoid excessive staleness, but short lifetimes can create expensive churn. Retirement does not replace correct handling of an unexpected disconnect.
+
+In Go, `sql.DB` is a concurrency-safe pool handle, not one connection. Create a long-lived handle for the intended database configuration rather than opening a new pool for each request. Observe `DB.Stats()` together with server activity to distinguish local waiting from downstream work.
 
 ## Key concepts
 
-### Maximum open connections
-The upper bound protects the downstream dependency and local resources.
+**Acquisition versus execution time.** Measure waiting for a connection separately from executing SQL. A request deadline should bound the overall operation; verify that the chosen driver honors cancellation on the relevant paths.
 
-### Idle connections
-Keeping some connections ready reduces setup latency but consumes downstream connection slots.
+**Fleet budget.** Multiply each pool maximum by the maximum number of simultaneous instances, including surge, workers and scheduled jobs. Reserve capacity for other services and operational access.
 
-### Connection lifetime
-Recycling connections can help with infrastructure changes and server policies, but excessive churn creates overhead.
+**Concurrency estimate.** Under stable conditions, average occupied connections are approximately acquisition throughput multiplied by average connection-hold time. Use consistent units and boundaries. This average does not determine tail-latency headroom or account for skew by itself.
 
-### Pool wait time
-Time spent waiting for a connection is an important saturation signal.
+**Connection proxy semantics.** A proxy can multiplex many client connections onto fewer server connections. Transaction pooling changes session-affinity assumptions; session state, temporary objects and prepared-statement support require checking the proxy's mode and version.
 
-### Fleet-wide capacity
-A per-instance pool size must be multiplied by the maximum number of application instances.
+**HTTP pooling differs.** HTTP/2 can multiplex multiple streams over one connection. A connection count is therefore not necessarily a request-concurrency limit; do not transfer database sizing arithmetic blindly to HTTP clients.
 
 ## Production example
 
-A service has a database maximum of 500 connections. Twenty pods each configure a pool of 50 connections, creating a theoretical demand of 1,000 connections.
+Assume a database permits 500 connections. Other services and operational reserve account for 200, leaving a budget of 300 for one API. The API may run 40 pods plus ten rollout-surge pods. A maximum of six connections per pod respects that worst-case budget: `50 × 6 = 300`.
 
-During a traffic spike, autoscaling increases pod count and the database rejects connections. Instead of raising every pool, the team budgets connections across the fleet, reserves capacity for administration and migrations, monitors pool wait time and optimizes slow transactions that hold connections unnecessarily.
+This arithmetic is a ceiling, not proof that six is sufficient or that 300 simultaneous queries are safe. Load tests measure pool waiting and database saturation. If the API performs 1,000 database operations per second with an average connection-hold time of 20 ms, its average occupied-connection demand is approximately 20 across the fleet under those measured stable conditions. Bursts, uneven load and long transactions still need examination.
+
+During a regression, the pool limit is reached even though SQL statements remain short. Traces reveal that code starts a transaction, queries a row, then calls a remote service before committing. The connection is held during the entire remote wait.
+
+The team changes the workflow so external work occurs outside that transaction where the business invariant permits, or uses an explicit state transition and asynchronous workflow where it does not. They also close result sets on all exit paths. Pool wait falls because hold time decreases; raising the maximum would have hidden the defect and spent more database capacity.
+
+A failover test confirms that broken connections are replaced and retries remain bounded. Requests that lose contact around commit require outcome-aware handling, not automatic repetition just because a new connection is available.
 
 ## Trade-offs
 
-Larger pools reduce application-side waiting until the downstream saturates. After that point they increase contention and can worsen latency.
+A larger pool can reduce local waiting when the downstream has spare capacity. Beyond that point, it moves the queue into the database and can worsen lock contention, memory demand and tail latency.
 
-Smaller pools provide stronger backpressure but may limit throughput if configured below the dependency's safe capacity.
+A smaller pool provides backpressure but can underutilize healthy capacity. Tune using representative concurrency and hold-time distributions, and preserve a fleet-level constraint. A proxy can improve connection efficiency but adds another component and may alter session behavior.
 
 ## Failure modes / pitfalls
 
-Common mistakes include multiplying pool size incorrectly across replicas, holding a database connection while calling remote services, leaking rows or transactions, unlimited waits, excessive connection lifetime, creating pools repeatedly and using pool size to compensate for slow queries.
+Leaked rows or transactions can permanently occupy capacity. One code path holding a connection while waiting for another operation that also needs the pool can create application-level deadlock, especially with a small maximum.
 
-Autoscaling can create a feedback loop: latency rises, more pods start, more database connections appear, and the database becomes even slower.
+Synchronized connection lifetimes can create reconnect bursts. Excessively short lifetimes waste handshakes, while relying on very long lifetimes cannot prevent infrastructure disconnects. A query timeout without an acquisition deadline leaves callers waiting too long before the query even begins.
+
+Do not ignore deployment surge or failover concentration when budgeting. A fleet safe across two independent databases may exceed one database's capacity after a routing change.
 
 ## When to use it
 
-Use bounded connection pools for dependencies where connection setup is expensive or the server has finite concurrent-connection capacity. Most database and HTTP clients already provide pooling and should be configured deliberately.
+Use the pooling provided by maintained database and HTTP clients, with deliberate limits and observability. Configure it before scaling application replicas, and revisit it when transaction duration or downstream topology changes.
+
+For diagnosis, start by separating waiting, holding and executing. These correspond to different causes and prevent a pool-size change from becoming the default response to every latency incident.
 
 ## When not to use it
 
-Do not create application-level pools on top of clients that already pool without understanding the interaction. Do not assume pooling solves a fundamentally overloaded dependency.
+Do not add another pool around an already pooled client without understanding both queues. Do not assume that a high database connection limit means the database can execute that many expensive queries efficiently.
+
+Avoid deriving one permanent pool size from request rate alone. The workload's actual connection-hold time, transaction mix and maximum fleet size are necessary inputs.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should size pools from concurrency and capacity, monitor active/idle/waiting connections, use acquisition timeouts and keep transactions short.
+A Senior Engineer should configure open, idle and lifetime limits; close rows and transactions reliably; and interpret active, idle and waiting metrics. They should identify whether a connection is doing useful SQL work or merely being retained by application control flow.
 
-They should understand that a connection pool is a backpressure boundary.
+They should also understand proxy mode restrictions and test reconnect behavior. Pooling is part of request admission and failure recovery, not just performance tuning.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should budget connections across services and autoscaling ranges, account for failover and maintenance, and understand proxies such as PgBouncer.
+A Staff Engineer should budget connections across services, autoscaling policies and failover scenarios. Platform defaults should expose the assumptions and allow teams to diagnose saturation instead of hiding it behind a large universal maximum.
 
-They should recognize systemic feedback loops between autoscaling, pools and databases and define organization-level defaults and observability.
+Coordinate capacity limits with workload priorities and deployment behavior. Prevent feedback loops where rising latency causes autoscaling, which creates more database contention and further increases latency.
+
+Further reading: [Go connection management](https://go.dev/doc/database/manage-connections), [PgBouncer features and pooling modes](https://www.pgbouncer.org/features.html).

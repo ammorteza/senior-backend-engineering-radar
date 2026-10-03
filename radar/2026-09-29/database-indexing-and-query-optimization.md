@@ -7,78 +7,99 @@ tags: [backend]
 
 ## What it is
 
-Database query optimization is the process of shaping schemas, indexes, statistics and queries so the database can execute important workloads efficiently. An index is an auxiliary data structure that trades storage and write cost for faster access to selected data.
+Query optimization reduces the work required to answer important database requests. It includes query shape, schema, statistics and access patterns as well as indexes. An index is an additional structure that lets the engine locate or order selected rows without examining the whole table.
 
-Optimization should be driven by execution evidence, not rules such as "every WHERE column needs an index."
+It is a trade: the index must be stored, cached and maintained when data changes. A useful index accelerates an actual workload enough to justify those costs. Indexing every column is not a substitute for understanding which rows the application asks for.
 
 ## Why it matters for backend engineers
 
-Database performance often determines backend latency and capacity. One query-plan regression can saturate CPU or I/O while application metrics appear normal.
+One high-frequency query can dominate database CPU or I/O even when each call seems moderately fast. Conversely, an infrequent long report may have little effect until it overlaps with peak traffic. Optimization should consider aggregate work, latency objectives and contention, not only the slowest observed duration.
 
-Senior engineers need enough planner literacy to distinguish application scaling problems from data-access problems.
+An index also interacts with correctness and product behavior. Pagination, tenant filters and required ordering shape the access path. Optimizing a query that accidentally returns far more data than the caller needs can preserve the underlying problem.
 
 ## How it works
 
-A query planner estimates the cost of possible execution strategies using table statistics, cardinality estimates and available indexes. It chooses scans, joins, sorting and aggregation strategies.
+Begin with the statement, parameter distribution, result size and frequency. Use query statistics to identify expensive workload families, then a representative measured plan to see where time and reads go. Determine whether the problem is scanning too many rows, repeating joins, sorting, waiting for locks or choosing a plan from poor estimates.
 
-B-tree indexes support many equality and range lookups. Composite index usefulness depends on column order and access patterns. Other index types serve specialized workloads.
+Design a candidate access path. A B-tree orders keys and commonly supports equality, ranges and ordered traversal. A composite index can align a tenant equality with a time range and stable ordering. Column order matters, but rules such as “most selective column first” are incomplete: equality constraints, range boundaries, ordering and other queries using the same index all matter.
 
-EXPLAIN shows the plan; EXPLAIN ANALYZE executes the query and reports actual timing and row counts, allowing comparison with estimates.
+Check statistics before assuming the access path is missing. The planner can reject an available index for good reasons, or because its row estimates are wrong. Refreshing statistics or modeling selected correlations may change its decision; this does not reduce the real number of rows requested.
+
+Validate both read improvement and write cost. Build the index through an appropriate production procedure, observe its use over representative traffic and retain a plan for removal if it adds little value.
 
 ## Key concepts
 
-### Selectivity
-An index is most useful when predicates narrow the search meaningfully.
+**Selectivity and locality.** Finding a few rows usually favors an index; retrieving much of a table can favor sequential access. Heap-page locality and cache state influence the actual crossover.
 
-### Cardinality estimation
-Bad estimates can cause the planner to choose the wrong join or scan strategy.
+**Partial indexes.** Indexing only a stable subset, such as rows where `status = 'open'`, can reduce size and maintenance. The planner must be able to establish that the query implies the index predicate. Parameterized conditions and generic plans can complicate that proof.
 
-### Composite index
-Column order should reflect actual filtering, ordering and access patterns.
+**Included columns.** Non-key payload columns can make index-only access possible, but PostgreSQL still needs visibility information to avoid heap checks. Wider indexes consume more space and write bandwidth; “cover everything” is not free.
 
-### Covering/index-only access
-An index may contain enough information to avoid some heap access.
+**Specialized indexes.** GIN can serve suitable containment or text-search operators; BRIN summarizes block ranges and can suit large physically correlated datasets. Choose an index method from the operators and data layout, not from its name.
 
-### Write amplification
-Every useful index also adds storage and maintenance work to writes.
-
-### Statistics
-Planner decisions depend on statistics; correlated columns can require richer statistics than independent estimates provide.
+**Statistics describe distributions.** A single-column histogram cannot capture every relationship between columns. Extended statistics offer specific forms of multicolumn information, with applicability limits; they are not a universal fix for joins or arbitrary expressions.
 
 ## Production example
 
-An order endpoint jumps from roughly tens of milliseconds to more than a second while service CPU remains normal. Database CPU rises sharply.
+A support API lists a workspace's newest tickets. Its query is:
 
-EXPLAIN ANALYZE shows the planner underestimates rows because hub_id and status are correlated, choosing an inefficient plan. Appropriate extended statistics improve the estimate and restore a better plan. The lesson is that an existing index alone does not guarantee the planner understands the data distribution.
+```sql
+SELECT id, created_at, subject
+FROM tickets
+WHERE workspace_id = $1
+ORDER BY created_at DESC, id DESC
+LIMIT 50;
+```
+
+An illustrative candidate is:
+
+```sql
+CREATE INDEX CONCURRENTLY tickets_workspace_recent_idx
+ON tickets (workspace_id, created_at DESC, id DESC);
+```
+
+The workspace equality selects a contiguous key range, and the remaining key order lets the engine find the newest entries without sorting every ticket in that workspace. The unique ID breaks timestamp ties. This assumes the identifier and timestamp are non-null and match the API's ordering contract.
+
+For subsequent pages, a cursor can add `(created_at, id) < ($2, $3)` while retaining the same descending order. This avoids repeatedly walking and discarding an ever-growing OFFSET. It does not freeze the dataset across requests; the API must define behavior when tickets are added or removed during pagination.
+
+Check plans for a small workspace and a large one, then compare rows visited, buffers and latency. Measure insert/update overhead and index size too. Do not add `subject` as an included column automatically: large text can make the index expensive, and only 50 heap fetches may already be acceptable.
+
+Concurrent creation reduces disruption to ordinary writes, but consumes resources, has waiting phases and can leave an invalid index after failure. Inspect completion and validity before declaring the rollout successful.
 
 ## Trade-offs
 
-Indexes speed selected reads but slow inserts and updates, consume memory/storage and require maintenance.
+Additional indexes speed selected reads while increasing storage, WAL generation and write maintenance. Similar indexes can overlap, but removal requires checking constraints and infrequent operational queries as well as recent usage counters.
 
-Denormalization or materialized views can improve reads further but introduce freshness and write complexity.
+Denormalized read models or precomputed aggregates can eliminate repeated joins, at the cost of freshness and synchronization. Use them when measured query work justifies the additional data-maintenance path, not because every join is inherently slow.
 
 ## Failure modes / pitfalls
 
-Common mistakes include indexing every column, trusting estimated plans without actual execution when safe, ignoring parameter-dependent plans, functions that prevent index use, huge OFFSET pagination and optimizing synthetic queries unlike production workloads.
+Functions or casts on indexed values can prevent the desired access unless a matching supported expression index exists. Unbounded result sets can remain expensive even with perfect lookup. Stale or unrepresentative statistics can mislead the planner.
 
-Another pitfall is focusing only on query duration rather than frequency: a moderately slow query executed millions of times may dominate cost.
+Speculative indexes accumulate unnoticed, particularly after counters reset or short observation windows hide seasonal queries. Increasing memory or disabling sequential scans may improve one experiment while harming the wider workload. Keep changes tied to evidence and verify concurrency, not just a solitary warm-cache run.
 
 ## When to use it
 
-Optimize queries when workload evidence shows meaningful latency, CPU, I/O or capacity impact. Design indexes from access patterns and validate them against realistic data.
+Optimize when query work materially affects latency, throughput, cost or capacity. Also review access paths when adding a new high-volume endpoint or changing a query's filtering and ordering contract.
+
+A practical sequence is: verify the result, identify the dominant work, change one relevant factor and compare under realistic data and concurrency. This preserves a causal explanation for the improvement.
 
 ## When not to use it
 
-Do not prematurely create speculative indexes or micro-optimize queries that are irrelevant to system cost. Sometimes the correct fix is a different data model or request pattern.
+Do not add indexes simply because a column appears in `WHERE`, or optimize a rarely used statement without considering its total impact. Avoid creating a new read model when a bounded query and suitable index meet the requirement.
+
+If a workload fundamentally needs broad historical scans, assess workload isolation or analytical storage rather than endlessly adding transactional indexes.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should read EXPLAIN ANALYZE, understand common scans and joins, index selectivity, composite indexes, statistics and write cost.
+A Senior Engineer should design indexes from predicates and ordering, read measured plans and explain the maintenance cost. They should recognize estimation problems, skewed tenants, pagination inefficiency and query amplification from application loops.
 
-They should correlate query plans with production metrics rather than guessing.
+They should also roll out and remove indexes safely, verify invalid-build states and communicate the evidence showing that the change helped the important workload.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should guide data-access architecture, recognize workload changes that invalidate previous indexing strategies and establish safe performance-testing and schema-review practices.
+A Staff Engineer should connect data-access growth to capacity, ownership and product contracts. Repeated per-query emergencies can indicate that APIs permit unbounded work or that analytics and operational traffic need separation.
 
-They should know when the problem has moved beyond one query into partitioning, caching, read models or workload isolation.
+Establish review and regression practices that include representative distributions, concurrent writes and lifecycle maintenance. The target is sustainable workload efficiency, not an ever-growing collection of indexes.
+
+Further reading: [PostgreSQL indexes](https://www.postgresql.org/docs/current/indexes.html), [Planner statistics](https://www.postgresql.org/docs/current/planner-stats.html), [Concurrent index creation](https://www.postgresql.org/docs/current/sql-createindex.html).

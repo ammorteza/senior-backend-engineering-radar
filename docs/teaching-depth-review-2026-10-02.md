@@ -1,6 +1,6 @@
-# Teaching-depth review — 2026-10-02
+# Teaching-depth review — started 2026-10-02, updated 2026-10-03
 
-**In progress: 13 of 148 articles rewritten and reread; 135 remain pending this review.** This is a partial delivery, not a completed repository-wide teaching audit.
+**In progress: 34 of 148 articles reviewed: 33 rewritten and reread, 1 preserved unchanged; 114 remain pending this review.** This is a partial delivery, not a completed repository-wide teaching audit.
 
 The earlier audit removed repeated prose but accepted overly compressed summaries. Its completion statement does not establish the teaching depth requested in this review. No unchanged article is classified as preserved or approved here until it receives the new review.
 
@@ -15,7 +15,7 @@ The earlier audit removed repeated prose but accepted overly compressed summarie
 - Remove filler that could be pasted into an unrelated article. Word count and duplicate scans are supporting signals, not acceptance tests.
 - Verify evolving or subtle claims against primary sources; keep illustrative scenarios distinct from documented incidents.
 
-## Rewritten and reread — 13
+## Rewritten and reread — 33
 
 | Article | Teaching change |
 | --- | --- |
@@ -33,7 +33,38 @@ The earlier audit removed repeated prose but accepted overly compressed summarie
 | [Threat modeling](../radar/2026-09-29/threat-modeling.md) | Turns document-import trust boundaries into distinct controls, tests, assumptions and ownership. |
 | [Zero trust architecture](../radar/2026-09-29/zero-trust-architecture.md) | Separates network placement, workload identity, delegation and enforcement; demonstrates containment tests. |
 
+| [SQL](../radar/2026-09-29/sql.md) | Explains result grain and join multiplication with a worked invoice aggregate and executable correctness fixture. |
+| [EXPLAIN / EXPLAIN ANALYZE](../radar/2026-09-29/explain-explain-analyze.md) | Interprets estimates, loops, buffers and inclusive timing; diagnoses a skewed join and explains execution hazards. |
+| [Database indexing and query optimization](../radar/2026-09-29/database-indexing-and-query-optimization.md) | Derives a composite index and stable cursor from a real query; considers write cost and concurrent-build failure. |
+| [MVCC and vacuuming](../radar/2026-09-29/mvcc-and-vacuuming.md) | Connects snapshots and cleanup horizons to heartbeat-table growth; distinguishes reusable space from file shrinkage. |
+| [Database storage internals](../radar/2026-09-29/database-storage-internals.md) | Contrasts B-tree and LSM maintenance; calculates illustrative write amplification and tests sustained compaction capacity. |
+| [PostgreSQL](../radar/2026-09-29/postgresql.md) | Connects engine mechanisms to diagnosis through a migration lock queue and application pool incident. |
+| [Database transactions and isolation](../radar/2026-09-29/database-transactions-and-isolation.md) | Works through a conditional last-seat update, a separate cross-row invariant and uncertain commit recovery. |
+| [Data modeling and access patterns](../radar/2026-09-29/data-modeling-and-access-patterns.md) | Separates current state, decision history and derived views; makes identity, constraints and access patterns explicit. |
+| [Connection pooling](../radar/2026-09-29/connection-pooling.md) | Budgets connections across rollout surge and explains hold-time demand, pool deadlocks and failover retries. |
+| [Database replication and failover](../radar/2026-09-29/database-replication-and-failover.md) | Separates replication progress, writer authority and fencing; includes uncertain commits and external-effect reconciliation. |
+| [Database migration tools](../radar/2026-09-29/database-migration-tools.md) | Explains expand/contract compatibility, all-writer rollout, concurrent backfill and the limits of rollback. |
+| [Horizontal partitioning and sharding](../radar/2026-09-29/horizontal-partitioning-and-sharding.md) | Distinguishes native partitions from shards; works through a hot tenant, routing ownership and fenced cutover. |
+| [Backup and disaster recovery](../radar/2026-09-29/backup-and-disaster-recovery.md) | Separates database restore from service recovery; works through selective repair, reconciliation and recovery timing. |
+| [Data retention and lifecycle](../radar/2026-09-29/data-retention-and-lifecycle.md) | Distinguishes access expiry from disposal across catalog, object versions, search and restored data. |
+| [Redis](../radar/2026-09-29/redis.md) | Explains atomicity, eviction, persistence and cluster placement; diagnoses session eviction and tests fleet-wide cold-cache demand. |
+| [Cassandra / Dynamo-style databases](../radar/2026-09-29/cassandra-dynamo-style-databases.md) | Makes Cassandra-specific guarantees explicit; sizes time-bucketed partitions and connects repair to deletion correctness. |
+| [BigQuery](../radar/2026-09-29/bigquery.md) | Explains scan work, pruning, clustering and capacity; designs a daily usage summary with late-event correction. |
+| [ClickHouse](../radar/2026-09-29/clickhouse.md) | Connects parts, sorting and merges to ingestion; distinguishes replacement identity from uniqueness and tests pre-merge results. |
+| [Apache Iceberg](../radar/2026-09-29/apache-iceberg.md) | Traces metadata commits and snapshots; separates partition evolution, file rewriting, expiry and safe orphan cleanup. |
+| [Elasticsearch / OpenSearch](../radar/2026-09-29/elasticsearch-opensearch.md) | Explains analysis, mappings and refresh; covers versioned CDC, deletion ordering and validated index rebuilds. |
+
+## Preserved unchanged — 1
+
+[Managed relational databases](../radar/2026-09-29/managed-relational-databases.md) already explains shared responsibility, control plane versus engine, topology, maintenance, recovery and cost with a concrete operating example. Reread and retained byte-for-byte.
+
 ## Validation
+
+Latest pass (2026-10-03): strict build succeeded with 148 entries and 158 generated pages. All article routes retain the eleven headings, and the 20 new expanded openings appear in rendered HTML. Metadata, section structure and duplicate-prose checks passed across all 148 entries. The managed-relational-databases article is byte-identical to the previous commit.
+
+The SQL aggregation example was executed against a small SQLite fixture to verify portable join/aggregate behavior, including tenant filtering and missing child rows. This does not validate PostgreSQL-specific execution plans or concurrent transaction behavior; PostgreSQL is not installed in this environment. Those examples were checked against PostgreSQL documentation.
+
+Previous security-group validation (2026-10-02):
 
 - Strict build passed: all 148 entries, compilation, lint/type checking and 158 generated static pages.
 - All 148 article routes contain the required headings. Expanded openings and the final PQC corrections are present in rendered HTML.
@@ -42,7 +73,7 @@ The earlier audit removed repeated prose but accepted overly compressed summarie
 - Code fragments are illustrative; this environment does not provide a Go compiler, so they were reviewed but not compiled here.
 - The existing disposable builder uses Node's tsx loader to avoid the environment's blocked IPC socket. A stale output-directory cleanup error was resolved by moving generated output aside; the final build exited successfully. No dependency or builder-source changes are part of this delivery.
 
-## Pending review — 135
+## Pending review — 114
 
 These entries are inventoried for continuation. This list does not assert that their bodies have been reread or that they meet the new standard.
 
@@ -52,28 +83,22 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Agent Skills](../radar/2026-09-29/agent-skills.md)
 - [AI-assisted software engineering](../radar/2026-09-29/ai-assisted-software-engineering.md)
 - [AI tool calling and structured outputs](../radar/2026-09-29/ai-tool-calling-and-structured-outputs.md)
-- [Apache Iceberg](../radar/2026-09-29/apache-iceberg.md)
 - [Apache Kafka](../radar/2026-09-29/apache-kafka.md)
 - [API design and evolution](../radar/2026-09-29/api-design-and-evolution.md)
 - [API gateway pattern](../radar/2026-09-29/api-gateway-pattern.md)
 - [Architecture Decision Records](../radar/2026-09-29/architecture-decision-records.md)
 - [AWS](../radar/2026-09-29/aws.md)
-- [Backup and disaster recovery](../radar/2026-09-29/backup-and-disaster-recovery.md)
 - [Bash / shell scripting](../radar/2026-09-29/bash-shell-scripting.md)
-- [BigQuery](../radar/2026-09-29/bigquery.md)
 - [Caching strategies](../radar/2026-09-29/caching-strategies.md)
 - [Capacity planning](../radar/2026-09-29/capacity-planning.md)
-- [Cassandra / Dynamo-style databases](../radar/2026-09-29/cassandra-dynamo-style-databases.md)
 - [Change Data Capture](../radar/2026-09-29/change-data-capture.md)
 - [Chaos engineering](../radar/2026-09-29/chaos-engineering.md)
 - [Circuit breakers](../radar/2026-09-29/circuit-breakers.md)
-- [ClickHouse](../radar/2026-09-29/clickhouse.md)
 - [CloudEvents](../radar/2026-09-29/cloudevents.md)
 - [Cloudflare](../radar/2026-09-29/cloudflare.md)
 - [Coding agents](../radar/2026-09-29/coding-agents.md)
 - [Coding throughput as productivity](../radar/2026-09-29/coding-throughput-as-productivity.md)
 - [Concurrency control](../radar/2026-09-29/concurrency-control.md)
-- [Connection pooling](../radar/2026-09-29/connection-pooling.md)
 - [Consensus and Raft](../radar/2026-09-29/consensus-and-raft.md)
 - [Containers](../radar/2026-09-29/containers.md)
 - [Content delivery networks](../radar/2026-09-29/content-delivery-networks.md)
@@ -82,13 +107,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [CQRS](../radar/2026-09-29/cqrs.md)
 - [CRDTs](../radar/2026-09-29/crdts.md)
 - [Data contracts](../radar/2026-09-29/data-contracts.md)
-- [Data modeling and access patterns](../radar/2026-09-29/data-modeling-and-access-patterns.md)
-- [Data retention and lifecycle](../radar/2026-09-29/data-retention-and-lifecycle.md)
-- [Database indexing and query optimization](../radar/2026-09-29/database-indexing-and-query-optimization.md)
-- [Database migration tools](../radar/2026-09-29/database-migration-tools.md)
-- [Database replication and failover](../radar/2026-09-29/database-replication-and-failover.md)
-- [Database storage internals](../radar/2026-09-29/database-storage-internals.md)
-- [Database transactions and isolation](../radar/2026-09-29/database-transactions-and-isolation.md)
 - [Delivery semantics](../radar/2026-09-29/delivery-semantics.md)
 - [Delve](../radar/2026-09-29/delve.md)
 - [Dev Containers](../radar/2026-09-29/dev-containers.md)
@@ -101,13 +119,11 @@ These entries are inventoried for continuation. This list does not assert that t
 - [DORA metrics](../radar/2026-09-29/dora-metrics.md)
 - [Durable agent workflows](../radar/2026-09-29/durable-agent-workflows.md)
 - [eBPF observability tools](../radar/2026-09-29/ebpf-observability-tools.md)
-- [Elasticsearch / OpenSearch](../radar/2026-09-29/elasticsearch-opensearch.md)
 - [Event-driven architecture](../radar/2026-09-29/event-driven-architecture.md)
 - [Event schema evolution](../radar/2026-09-29/event-schema-evolution.md)
 - [Event sourcing](../radar/2026-09-29/event-sourcing.md)
 - [Evolutionary architecture](../radar/2026-09-29/evolutionary-architecture.md)
 - [Exactly-once assumptions](../radar/2026-09-29/exactly-once-assumptions.md)
-- [EXPLAIN / EXPLAIN ANALYZE](../radar/2026-09-29/explain-explain-analyze.md)
 - [Feature flags](../radar/2026-09-29/feature-flags.md)
 - [GCP Pub/Sub](../radar/2026-09-29/gcp-pub-sub.md)
 - [Git](../radar/2026-09-29/git.md)
@@ -120,7 +136,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Grafana](../radar/2026-09-29/grafana.md)
 - [gRPC](../radar/2026-09-29/grpc.md)
 - [Helm](../radar/2026-09-29/helm.md)
-- [Horizontal partitioning and sharding](../radar/2026-09-29/horizontal-partitioning-and-sharding.md)
 - [HTTP](../radar/2026-09-29/http.md)
 - [Idempotency](../radar/2026-09-29/idempotency.md)
 - [Incident response and blameless postmortems](../radar/2026-09-29/incident-response-and-blameless-postmortems.md)
@@ -133,21 +148,18 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Local Kubernetes environments](../radar/2026-09-29/local-kubernetes-environments.md)
 - [Logical clocks and causal ordering](../radar/2026-09-29/logical-clocks-and-causal-ordering.md)
 - [Make / task runners](../radar/2026-09-29/make-task-runners.md)
-- [Managed relational databases](../radar/2026-09-29/managed-relational-databases.md)
 - [Memory management and garbage collection](../radar/2026-09-29/memory-management-and-garbage-collection.md)
 - [Microservices](../radar/2026-09-29/microservices.md)
 - [Model Context Protocol (MCP)](../radar/2026-09-29/model-context-protocol-mcp.md)
 - [Model routing and AI gateways](../radar/2026-09-29/model-routing-and-ai-gateways.md)
 - [Modular monolith](../radar/2026-09-29/modular-monolith.md)
 - [Multi-region architecture](../radar/2026-09-29/multi-region-architecture.md)
-- [MVCC and vacuuming](../radar/2026-09-29/mvcc-and-vacuuming.md)
 - [Object storage](../radar/2026-09-29/object-storage.md)
 - [Observability](../radar/2026-09-29/observability.md)
 - [OpenAPI](../radar/2026-09-29/openapi.md)
 - [OpenTelemetry](../radar/2026-09-29/opentelemetry.md)
 - [OS scheduling and resource isolation](../radar/2026-09-29/os-scheduling-and-resource-isolation.md)
 - [Platform engineering](../radar/2026-09-29/platform-engineering.md)
-- [PostgreSQL](../radar/2026-09-29/postgresql.md)
 - [Premature microservice decomposition](../radar/2026-09-29/premature-microservice-decomposition.md)
 - [Progressive delivery](../radar/2026-09-29/progressive-delivery.md)
 - [Prometheus](../radar/2026-09-29/prometheus.md)
@@ -156,7 +168,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Queues and load shedding](../radar/2026-09-29/queues-and-load-shedding.md)
 - [RAG architecture](../radar/2026-09-29/rag-architecture.md)
 - [Rate limiting and backpressure](../radar/2026-09-29/rate-limiting-and-backpressure.md)
-- [Redis](../radar/2026-09-29/redis.md)
 - [Regular expressions](../radar/2026-09-29/regular-expressions.md)
 - [Replication and consistency models](../radar/2026-09-29/replication-and-consistency-models.md)
 - [Repository instructions for coding agents](../radar/2026-09-29/repository-instructions-for-coding-agents.md)
@@ -166,7 +177,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Service mesh by default](../radar/2026-09-29/service-mesh-by-default.md)
 - [Service mesh](../radar/2026-09-29/service-mesh.md)
 - [SLIs, SLOs and error budgets](../radar/2026-09-29/slis-slos-and-error-budgets.md)
-- [SQL](../radar/2026-09-29/sql.md)
 - [Strangler Fig migration](../radar/2026-09-29/strangler-fig-migration.md)
 - [Stream processing](../radar/2026-09-29/stream-processing.md)
 - [TCP and connection lifecycle](../radar/2026-09-29/tcp-and-connection-lifecycle.md)
