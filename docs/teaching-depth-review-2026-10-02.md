@@ -1,6 +1,6 @@
 # Teaching-depth review — started 2026-10-02, updated 2026-10-03
 
-**In progress: 34 of 148 articles reviewed: 33 rewritten and reread, 1 preserved unchanged; 114 remain pending this review.** This is a partial delivery, not a completed repository-wide teaching audit.
+**In progress: 46 of 148 articles reviewed: 45 rewritten and reread, 1 preserved unchanged; 102 remain pending this review.** This is a partial delivery, not a completed repository-wide teaching audit.
 
 The earlier audit removed repeated prose but accepted overly compressed summaries. Its completion statement does not establish the teaching depth requested in this review. No unchanged article is classified as preserved or approved here until it receives the new review.
 
@@ -15,7 +15,7 @@ The earlier audit removed repeated prose but accepted overly compressed summarie
 - Remove filler that could be pasted into an unrelated article. Word count and duplicate scans are supporting signals, not acceptance tests.
 - Verify evolving or subtle claims against primary sources; keep illustrative scenarios distinct from documented incidents.
 
-## Rewritten and reread — 33
+## Rewritten and reread — 45
 
 | Article | Teaching change |
 | --- | --- |
@@ -54,11 +54,27 @@ The earlier audit removed repeated prose but accepted overly compressed summarie
 | [Apache Iceberg](../radar/2026-09-29/apache-iceberg.md) | Traces metadata commits and snapshots; separates partition evolution, file rewriting, expiry and safe orphan cleanup. |
 | [Elasticsearch / OpenSearch](../radar/2026-09-29/elasticsearch-opensearch.md) | Explains analysis, mappings and refresh; covers versioned CDC, deletion ordering and validated index rebuilds. |
 
+| [Delivery semantics](../radar/2026-09-29/delivery-semantics.md) | Separates publication, delivery and effects; a crash table explains atomic consumer progress and why ordering remains separate. |
+| [Idempotency](../radar/2026-09-29/idempotency.md) | Defines key scope, request fingerprints, concurrent claims and retention; distinguishes local atomicity from provider outcome recovery. |
+| [Exactly-once assumptions](../radar/2026-09-29/exactly-once-assumptions.md) | Names Kafka and Pub/Sub guarantee boundaries; tests lost payout responses, duplicate publication and replay after key expiry. |
+| [Transactional Outbox](../radar/2026-09-29/transactional-outbox.md) | Explains durable intent, relay claims, immutable payloads and ordering; distinguishes unchanged retries from corrective events. |
+| [Change Data Capture](../radar/2026-09-29/change-data-capture.md) | Explains snapshot continuity, source positions, deletes and source-log pressure; works through a live destination rebuild. |
+| [Event-driven architecture](../radar/2026-09-29/event-driven-architecture.md) | Explains fan-out, payload choices and product completion states through a recording pipeline with deletion and replay behavior. |
+| [Event schema evolution](../radar/2026-09-29/event-schema-evolution.md) | Defines reader/writer compatibility and format-specific rules; works through a units migration that type checking cannot validate. |
+| [Apache Kafka](../radar/2026-09-29/apache-kafka.md) | Connects partitions, acknowledgements, offsets and retention to hot-key limits and duplicate-safe database aggregation. |
+| [GCP Pub/Sub](../radar/2026-09-29/gcp-pub-sub.md) | Explains subscription ownership, flow control, acknowledgement scope and approximate dead lettering; budgets a shared provider quota. |
+| [CloudEvents](../radar/2026-09-29/cloudevents.md) | Explains envelope versus payload and transport modes; includes valid JSON, identity-preserving translation and source authorization tests. |
+| [Saga pattern](../radar/2026-09-29/saga-pattern.md) | Models durable workflow states, uncertain outcomes, failed compensation and late replies without assuming rollback or global isolation. |
+| [Event sourcing](../radar/2026-09-29/event-sourcing.md) | Distinguishes authoritative history from audit and integration events; explains expected-version appends, temporal meaning and safe projection replay. |
+
 ## Preserved unchanged — 1
 
 [Managed relational databases](../radar/2026-09-29/managed-relational-databases.md) already explains shared responsibility, control plane versus engine, topology, maintenance, recovery and cost with a concrete operating example. Reread and retained byte-for-byte.
 
 ## Validation
+
+Messaging pass (2026-10-03): twelve articles expanded, reread and checked against primary specifications and provider documentation. Strict build passed with 148 entries and 158 pages. All rendered article routes retain the required headings; the twelve revised openings and delivery crash table were verified in HTML. CloudEvents example JSON parses and includes the required envelope attributes. All metadata, section, code-fence and duplicate-prose checks passed. No live broker/provider integration or crash-injection tests were run; the articles describe illustrative validation scenarios, not measured production results.
+
 
 Latest pass (2026-10-03): strict build succeeded with 148 entries and 158 generated pages. All article routes retain the eleven headings, and the 20 new expanded openings appear in rendered HTML. Metadata, section structure and duplicate-prose checks passed across all 148 entries. The managed-relational-databases article is byte-identical to the previous commit.
 
@@ -75,7 +91,7 @@ Previous security-group validation (2026-10-02):
 - Code fragments are illustrative; this environment does not provide a Go compiler, so they were reviewed but not compiled here.
 - The existing disposable builder uses Node's tsx loader to avoid the environment's blocked IPC socket. A stale output-directory cleanup error was resolved by moving generated output aside; the final build exited successfully. No dependency or builder-source changes are part of this delivery.
 
-## Pending review — 114
+## Pending review — 102
 
 These entries are inventoried for continuation. This list does not assert that their bodies have been reread or that they meet the new standard.
 
@@ -85,7 +101,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Agent Skills](../radar/2026-09-29/agent-skills.md)
 - [AI-assisted software engineering](../radar/2026-09-29/ai-assisted-software-engineering.md)
 - [AI tool calling and structured outputs](../radar/2026-09-29/ai-tool-calling-and-structured-outputs.md)
-- [Apache Kafka](../radar/2026-09-29/apache-kafka.md)
 - [API design and evolution](../radar/2026-09-29/api-design-and-evolution.md)
 - [API gateway pattern](../radar/2026-09-29/api-gateway-pattern.md)
 - [Architecture Decision Records](../radar/2026-09-29/architecture-decision-records.md)
@@ -93,10 +108,8 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Bash / shell scripting](../radar/2026-09-29/bash-shell-scripting.md)
 - [Caching strategies](../radar/2026-09-29/caching-strategies.md)
 - [Capacity planning](../radar/2026-09-29/capacity-planning.md)
-- [Change Data Capture](../radar/2026-09-29/change-data-capture.md)
 - [Chaos engineering](../radar/2026-09-29/chaos-engineering.md)
 - [Circuit breakers](../radar/2026-09-29/circuit-breakers.md)
-- [CloudEvents](../radar/2026-09-29/cloudevents.md)
 - [Cloudflare](../radar/2026-09-29/cloudflare.md)
 - [Coding agents](../radar/2026-09-29/coding-agents.md)
 - [Coding throughput as productivity](../radar/2026-09-29/coding-throughput-as-productivity.md)
@@ -109,7 +122,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [CQRS](../radar/2026-09-29/cqrs.md)
 - [CRDTs](../radar/2026-09-29/crdts.md)
 - [Data contracts](../radar/2026-09-29/data-contracts.md)
-- [Delivery semantics](../radar/2026-09-29/delivery-semantics.md)
 - [Delve](../radar/2026-09-29/delve.md)
 - [Dev Containers](../radar/2026-09-29/dev-containers.md)
 - [Distributed locking](../radar/2026-09-29/distributed-locking.md)
@@ -121,13 +133,8 @@ These entries are inventoried for continuation. This list does not assert that t
 - [DORA metrics](../radar/2026-09-29/dora-metrics.md)
 - [Durable agent workflows](../radar/2026-09-29/durable-agent-workflows.md)
 - [eBPF observability tools](../radar/2026-09-29/ebpf-observability-tools.md)
-- [Event-driven architecture](../radar/2026-09-29/event-driven-architecture.md)
-- [Event schema evolution](../radar/2026-09-29/event-schema-evolution.md)
-- [Event sourcing](../radar/2026-09-29/event-sourcing.md)
 - [Evolutionary architecture](../radar/2026-09-29/evolutionary-architecture.md)
-- [Exactly-once assumptions](../radar/2026-09-29/exactly-once-assumptions.md)
 - [Feature flags](../radar/2026-09-29/feature-flags.md)
-- [GCP Pub/Sub](../radar/2026-09-29/gcp-pub-sub.md)
 - [Git](../radar/2026-09-29/git.md)
 - [GitHub Actions](../radar/2026-09-29/github-actions.md)
 - [Go execution tracer](../radar/2026-09-29/go-execution-tracer.md)
@@ -139,7 +146,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [gRPC](../radar/2026-09-29/grpc.md)
 - [Helm](../radar/2026-09-29/helm.md)
 - [HTTP](../radar/2026-09-29/http.md)
-- [Idempotency](../radar/2026-09-29/idempotency.md)
 - [Incident response and blameless postmortems](../radar/2026-09-29/incident-response-and-blameless-postmortems.md)
 - [JSON Schema](../radar/2026-09-29/json-schema.md)
 - [k6](../radar/2026-09-29/k6.md)
@@ -173,7 +179,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Regular expressions](../radar/2026-09-29/regular-expressions.md)
 - [Replication and consistency models](../radar/2026-09-29/replication-and-consistency-models.md)
 - [Repository instructions for coding agents](../radar/2026-09-29/repository-instructions-for-coding-agents.md)
-- [Saga pattern](../radar/2026-09-29/saga-pattern.md)
 - [Serverless platforms](../radar/2026-09-29/serverless-platforms.md)
 - [Service discovery](../radar/2026-09-29/service-discovery.md)
 - [Service mesh by default](../radar/2026-09-29/service-mesh-by-default.md)
@@ -186,7 +191,6 @@ These entries are inventoried for continuation. This list does not assert that t
 - [Terraform / OpenTofu](../radar/2026-09-29/terraform-opentofu.md)
 - [Timeouts, retries and jitter](../radar/2026-09-29/timeouts-retries-and-jitter.md)
 - [TLS and PKI](../radar/2026-09-29/tls-and-pki.md)
-- [Transactional Outbox](../radar/2026-09-29/transactional-outbox.md)
 - [Trunk-based development](../radar/2026-09-29/trunk-based-development.md)
 - [Unbounded retries and queues](../radar/2026-09-29/unbounded-retries-and-queues.md)
 - [Vector databases](../radar/2026-09-29/vector-databases.md)
