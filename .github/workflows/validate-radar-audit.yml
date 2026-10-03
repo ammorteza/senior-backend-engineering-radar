@@ -1,0 +1,97 @@
+name: Validate teaching-depth audit
+
+on:
+  push:
+    branches: [teaching-depth-audit-2026-10-03]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate article structure and duplicate prose
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, statistics
+
+          root = Path('radar/2026-09-29')
+          files = sorted(root.glob('*.md'))
+          required = [
+              '## What it is',
+              '## Why it matters for backend engineers',
+              '## How it works',
+              '## Key concepts',
+              '## Production example',
+              '## Trade-offs',
+              '## Failure modes / pitfalls',
+              '## When to use it',
+              '## When not to use it',
+              '## What a Senior Engineer should know',
+              '## What a Staff Engineer should understand',
+          ]
+          if len(files) != 148:
+              raise SystemExit(f'Expected 148 articles, found {len(files)}')
+
+          bad = []
+          paragraphs = {}
+          word_counts = []
+          for path in files:
+              text = path.read_text()
+              fm = re.match(r'^---\n(.*?)\n---', text, re.S)
+              if not fm:
+                  bad.append(f'{path}: missing frontmatter')
+                  continue
+              meta = fm.group(1)
+              checks = [
+                  (r'^title:\s*.+$', 'title'),
+                  (r'^ring:\s*(adopt|trial|assess|caution)$', 'ring'),
+                  (r'^segment:\s*.+$', 'segment'),
+                  (r'^tags:\s*\[.*\]$', 'tags'),
+              ]
+              for pattern, label in checks:
+                  if not re.search(pattern, meta, re.M):
+                      bad.append(f'{path}: invalid {label} metadata')
+              headings = re.findall(r'^## .+$', text, re.M)
+              if headings != required:
+                  bad.append(f'{path}: heading sequence differs: {headings}')
+              if '§' in text:
+                  bad.append(f'{path}: contains placeholder character')
+              body = re.sub(r'^---\n.*?\n---\n?', '', text, flags=re.S)
+              word_counts.append(len(re.findall(r'\S+', body)))
+              for para in re.split(r'\n\s*\n', body):
+                  norm = re.sub(r'\s+', ' ', para).strip()
+                  if len(norm.split()) < 20:
+                      continue
+                  if norm.startswith('Further reading:') or norm.startswith('```') or norm.startswith('~~~'):
+                      continue
+                  paragraphs.setdefault(norm, set()).add(str(path))
+
+          duplicates = [(p, sorted(ps)) for p, ps in paragraphs.items() if len(ps) > 1]
+          if duplicates:
+              for p, ps in duplicates[:20]:
+                  bad.append(f'duplicate prose in {ps}: {p[:180]}')
+
+          print(f'articles={len(files)}')
+          print(f'word_count_min={min(word_counts)} max={max(word_counts)} median={int(statistics.median(word_counts))}')
+          print(f'duplicate_paragraph_groups={len(duplicates)}')
+          if bad:
+              print('\n'.join(bad))
+              raise SystemExit(1)
+          print('Structural and duplicate-prose validation passed.')
+          PY
+      - name: Diff check
+        run: git diff --check origin/master...HEAD
+      - name: Install dependencies
+        run: npm install
+      - name: Strict build
+        run: npm run build
