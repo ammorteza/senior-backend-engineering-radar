@@ -1,4 +1,4 @@
-# Teaching-depth review — completed 2026-10-03
+# Teaching-depth review — completed 2026-10-03; independently reverified 2026-10-04
 
 **Complete: 148 of 148 radar articles reviewed individually. 145 were rewritten and reread; 3 were preserved unchanged after review; 0 remain pending.**
 
@@ -73,6 +73,22 @@ Results:
 - The normal GitHub Pages build and deployment also completed successfully after the final content correction.
 
 No claim is made that prose length proves teaching quality; the repository-wide editorial review was performed article by article, and the automated checks verify only structural/build regressions around that review.
+
+## Independent second-pass verification — 2026-10-04
+
+A second editorial pass reread and accounted for **all 148/148 blips** after the completion commit rather than relying on the completion tracker or automated length checks.
+
+This pass specifically looked for the failure mode that triggered this audit: articles whose nouns had changed but whose teaching content remained generic or interchangeable. No remaining article required a content rewrite. The reviewed blips now have topic-specific mechanisms, production scenarios, trade-offs, failure analysis, and distinct Senior-versus-Staff expectations.
+
+Additional checks in this pass:
+
+- Repository-wide code search found **0 occurrences** of the earlier boilerplate phrases such as “important goal is not memorizing terminology”, “tool in the backend-engineering landscape”, “what concrete requirement would justify it”, and the generic “backend engineers work at boundaries...” framing.
+- Every one of the 148 article paths was included in the second-pass inventory; none were left outside the review set.
+- Neighboring topics were compared directly to ensure they teach different boundaries: for example delivery semantics versus idempotency versus exactly-once assumptions; observability versus OpenTelemetry versus tracing; API design versus OpenAPI; service discovery versus DNS versus load balancing; and microservices versus modular monoliths.
+- Fast-moving claims were rechecked against current primary documentation on 2026-10-04: MCP 2026-07-28 remains the current stateless protocol revision; RFC 9846 is the current TLS 1.3 specification; Prometheus native histograms are stable from Prometheus 3.8 with explicit scrape/remote-write configuration still relevant; Python free-threaded builds remain an optional supported mode beginning with CPython 3.13; and current DORA guidance uses five software-delivery metrics.
+- The latest content-bearing audit commit had already passed the dedicated teaching-depth validation workflow. The branch-head follow-up commit only removed that temporary workflow, and the normal GitHub Pages deployment for the resulting head completed successfully.
+
+This second pass therefore confirms the editorial result rather than inflating the rewrite count: **145 articles required rewrites during the audit, 3 were preserved after review, and 148/148 now pass the teaching-depth standard.**
 
 ## Pending review
 
