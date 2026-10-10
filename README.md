@@ -30,7 +30,7 @@ This radar is reviewed **twice per week, every Tuesday and Friday**. Each review
 
 The goal is to keep the radar useful as a living Senior-to-Staff learning resource. Existing articles may therefore be expanded or rewritten as better explanations, production lessons and ecosystem changes emerge.
 
-The [teaching-depth review](docs/teaching-depth-review-2026-10-02.md) is in progress: 46 articles have been reviewed (45 expanded and reread, 1 preserved unchanged), with 102 still pending. The [earlier editorial audit](docs/editorial-audit-2026-10-02.md) removed repeated prose but did not establish sufficient teaching depth.
+The [teaching-depth review](docs/teaching-depth-review-2026-10-02.md) is complete and was independently reverified: all 148 articles were reviewed individually, 145 were rewritten and reread, and 3 were preserved unchanged after review. The [earlier editorial audit](docs/editorial-audit-2026-10-02.md) removed repeated prose but did not establish sufficient teaching depth.
 
 ## 20-minute daily routine
 
