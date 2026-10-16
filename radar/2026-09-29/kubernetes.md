@@ -45,6 +45,8 @@ On termination, Kubernetes sends SIGTERM and waits up to the pod's termination g
 
 **Topology spread and anti-affinity.** Help place replicas across failure domains. Replica count alone does not guarantee spread.
 
+**Ingress, Ingress controllers, and Gateway API.** The `networking.k8s.io/v1` Ingress API is still a stable Kubernetes API, but it is frozen: Kubernetes recommends Gateway API for new capabilities. An Ingress object does nothing without a controller. The community-maintained Ingress NGINX controller was retired on March 24, 2026; that retirement does not mean the Ingress API itself was removed. Existing Ingress NGINX installations continue to run, but they no longer receive project releases, bug fixes, or security fixes.
+
 ## Production example
 
 An API has a liveness probe that checks PostgreSQL. During a brief database outage, every pod fails liveness and restarts. Restarted pods all open new connection pools at once, increasing pressure on the recovering database.
@@ -56,6 +58,8 @@ The service handles SIGTERM by immediately failing readiness, waiting for endpoi
 Resource requests are based on measured steady CPU and memory; limits are tested under burst load. The team runs `kubectl get pods`, `kubectl describe pod`, `kubectl get events`, `kubectl top`, rollout status, and EndpointSlice inspection during a controlled rollout to verify the lifecycle.
 
 A node-drain test confirms enough replicas remain available and that the PodDisruptionBudget does not get mistaken for protection against an abrupt node crash.
+
+For north-south HTTP routing, the team also inventories its IngressClass and controller instead of assuming the `Ingress` objects identify the implementation. If it is still using the retired community Ingress NGINX controller, the migration test compares behavior—not only YAML. Regex path matching, redirects, annotations, header handling, and controller-specific defaults can change when moving to Gateway API or another controller, so representative routes are exercised before traffic is switched.
 
 ## Trade-offs
 
@@ -71,6 +75,8 @@ Bad probes create restart or traffic-removal loops. Mutable image tags make roll
 
 Insufficient termination grace and application shutdown handling lose requests during deployment. Putting all replicas in one zone undermines availability claims.
 
+Another pitfall is treating an Ingress-controller migration as a syntax conversion. Ingress implementations historically encode behavior through annotations and `ImplementationSpecific` paths; translating resources without testing the effective routing semantics can produce subtle production regressions.
+
 ## When to use it
 
 Use Kubernetes when the organization benefits from a shared orchestration platform, many containerized services, policy control, and extensible scheduling or lifecycle behavior.
@@ -85,7 +91,7 @@ Do not use Kubernetes objects as a substitute for application-level durability, 
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should understand Deployments, Pods, Services, EndpointSlices, probes, requests and limits, events, graceful termination, Jobs, ConfigMaps and Secrets, and common `kubectl` inspection flows.
+A Senior Engineer should understand Deployments, Pods, Services, EndpointSlices, probes, requests and limits, events, graceful termination, Jobs, ConfigMaps and Secrets, Ingress versus Ingress controllers, the role of Gateway API, and common `kubectl` inspection flows.
 
 They should distinguish Pending scheduling failures, CrashLoopBackOff application failures, readiness failures, image-pull problems, OOM termination, and service-routing issues from evidence.
 
@@ -95,4 +101,4 @@ A Staff Engineer should define cluster tenancy, upgrade strategy, workload ident
 
 They should decide which Kubernetes complexity is exposed to product teams and which is safely standardized, while ensuring abstractions remain debuggable.
 
-Further reading: [Kubernetes concepts](https://kubernetes.io/docs/concepts/), [Application debugging](https://kubernetes.io/docs/tasks/debug/debug-application/).
+Further reading: [Kubernetes concepts](https://kubernetes.io/docs/concepts/), [Application debugging](https://kubernetes.io/docs/tasks/debug/debug-application/), [Ingress controllers](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/), [Ingress NGINX retirement](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), [Ingress2Gateway](https://kubernetes.io/blog/2026/03/20/ingress2gateway-1-0-release/).
