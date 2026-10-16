@@ -35,7 +35,7 @@ SDK exporters should use bounded queues and timeouts. If the backend is unavaila
 
 **Resource attributes.** Identify the service/workload producing data. Stable `service.name` and version/environment identity make cross-service analysis possible.
 
-**Semantic conventions.** Standard names and meanings for HTTP, database, messaging, RPC, cloud, and other telemetry. Their stability status can differ by convention; upgrades need review.
+**Semantic conventions.** Standard names and meanings for HTTP, database, messaging, RPC, cloud, and other telemetry. Their stability status can differ by convention; upgrades need review. Treat a semantic-convention upgrade as a telemetry schema migration: attribute keys can change, values can be redefined, metric names and units can move, and span names or relationships can change even when both old and new attributes are emitted temporarily.
 
 **Instrumentation library versus manual spans.** Auto-instrumentation covers common frameworks; manual instrumentation adds domain operations. Duplicating both around the same call can produce confusing nested spans.
 
@@ -53,7 +53,7 @@ A collector receives OTLP telemetry. A processor removes sensitive request attri
 
 The team deliberately blocks the tracing backend. Collector and SDK queues reach bounded limits; dropped telemetry is reported, but API request latency remains within objective. This verifies that observability failure does not become an application outage.
 
-During a semantic-convention upgrade, the team checks current stability guidance and dashboard queries before switching attribute names. It does not assume every convention family changes in lockstep.
+During a semantic-convention upgrade, the team checks current stability guidance and dashboard queries before switching attribute names. It does not assume every convention family changes in lockstep. For example, when previewing the OpenTelemetry Java agent 3.0 behavior, it compares database attributes such as `db.system` versus `db.system.name`, verifies connection-pool metric names and units, and inspects messaging traces because newer conventions can change span names and parent/link relationships. The rollout is accepted only after alerts, SLO queries, dashboards, and downstream processors work against the new telemetry shape.
 
 ## Trade-offs
 
@@ -68,6 +68,8 @@ Central collectors simplify policy and backend routing while adding a shared dep
 Double instrumentation creates duplicate spans and distorted latency. Missing propagation produces disconnected traces. High-cardinality metric attributes can overwhelm storage.
 
 Sensitive HTTP headers, SQL values, or message payloads can leak through attributes. Sampling reduces cost but is not a privacy mechanism.
+
+A subtler failure is upgrading instrumentation while treating telemetry as if only attribute names changed. Unit changes can invalidate alert thresholds, renamed metrics can make dashboards silently empty, and messaging-convention changes can alter trace topology. Dual-emission modes help migration but do not necessarily preserve every legacy metric or trace shape.
 
 Unbounded exporter queues or synchronous export on request paths can turn telemetry outages into application memory or latency incidents.
 
@@ -85,14 +87,14 @@ A small application already using one maintained instrumentation stack may not b
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should configure resources, propagation, semantic attributes, sampling, batching, and bounded exporters. They should inspect actual emitted telemetry rather than assume an instrumentation library produces the intended data.
+A Senior Engineer should configure resources, propagation, semantic attributes, sampling, batching, and bounded exporters. They should inspect actual emitted telemetry rather than assume an instrumentation library produces the intended data, and they should validate semantic-convention upgrades against queries, units, span structure, and backend behavior before rollout.
 
 They should understand where manual spans add domain value and how telemetry behaves when collectors/backends fail.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should own semantic-convention upgrades, collector topology, privacy/redaction, sampling strategy, and telemetry capacity across services.
+A Staff Engineer should own semantic-convention upgrades as cross-service schema migrations, plus collector topology, privacy/redaction, sampling strategy, and telemetry capacity across services.
 
 They should make instrumentation interoperable without requiring every team to understand backend-specific export details, while preserving escape hatches for domain-specific signals.
 
-Further reading: [OpenTelemetry concepts](https://opentelemetry.io/docs/concepts/), [Semantic conventions](https://opentelemetry.io/docs/specs/semconv/).
+Further reading: [OpenTelemetry concepts](https://opentelemetry.io/docs/concepts/), [Semantic conventions](https://opentelemetry.io/docs/specs/semconv/), [OpenTelemetry Java agent 3.0 preview](https://opentelemetry.io/blog/2026/java-agent-3.0-preview/).
