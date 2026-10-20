@@ -37,6 +37,8 @@ In Go, `sql.DB` is a concurrency-safe pool handle, not one connection. Create a 
 
 **Connection proxy semantics.** A proxy can multiplex many client connections onto fewer server connections. Transaction pooling changes session-affinity assumptions; session state, temporary objects and prepared-statement support require checking the proxy's mode and version.
 
+**Security boundary.** A database proxy participates in authentication, connection routing, protocol parsing, and often TLS termination. Treat it as exposed infrastructure that needs timely security patching, not as a passive performance helper. PgBouncer 1.26.1, released in October 2026, fixed multiple security vulnerabilities including an authentication bypass and denial-of-service issues; operators on affected versions should upgrade according to the project advisory.
+
 **HTTP pooling differs.** HTTP/2 can multiplex multiple streams over one connection. A connection count is therefore not necessarily a request-concurrency limit; do not transfer database sizing arithmetic blindly to HTTP clients.
 
 ## Production example
@@ -65,6 +67,8 @@ Synchronized connection lifetimes can create reconnect bursts. Excessively short
 
 Do not ignore deployment surge or failover concentration when budgeting. A fleet safe across two independent databases may exceed one database's capacity after a routing change.
 
+Proxy version drift is also an operational risk. A pooler that sits in front of a database can contain security-sensitive protocol and authentication logic, so patch policy should be closer to an edge proxy or database component than to a low-risk utility library.
+
 ## When to use it
 
 Use the pooling provided by maintained database and HTTP clients, with deliberate limits and observability. Configure it before scaling application replicas, and revisit it when transaction duration or downstream topology changes.
@@ -79,7 +83,7 @@ Avoid deriving one permanent pool size from request rate alone. The workload's a
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should configure open, idle and lifetime limits; close rows and transactions reliably; and interpret active, idle and waiting metrics. They should identify whether a connection is doing useful SQL work or merely being retained by application control flow.
+A Senior Engineer should configure open, idle and lifetime limits; close rows and transactions reliably; and interpret active, idle and waiting metrics. They should identify whether a connection is doing useful SQL work or merely being retained by application control flow. When a connection proxy is used, they should also understand its authentication mode, patch level, and whether its pooling mode changes application-visible session behavior.
 
 They should also understand proxy mode restrictions and test reconnect behavior. Pooling is part of request admission and failure recovery, not just performance tuning.
 
@@ -89,4 +93,4 @@ A Staff Engineer should budget connections across services, autoscaling policies
 
 Coordinate capacity limits with workload priorities and deployment behavior. Prevent feedback loops where rising latency causes autoscaling, which creates more database contention and further increases latency.
 
-Further reading: [Go connection management](https://go.dev/doc/database/manage-connections), [PgBouncer features and pooling modes](https://www.pgbouncer.org/features.html).
+Further reading: [Go connection management](https://go.dev/doc/database/manage-connections), [PgBouncer features and pooling modes](https://www.pgbouncer.org/features.html), [PgBouncer 1.26.1 security release](https://www.pgbouncer.org/2026/10/pgbouncer-1-26-1).
