@@ -27,6 +27,8 @@ HTTP caching separates freshness from validation. A fresh response can be reused
 
 Connections are independent from requests at the semantic layer. HTTP/1.1 can reuse a connection sequentially or with limited pipelining semantics; HTTP/2 multiplexes streams; HTTP/3 multiplexes over QUIC. An application still needs request concurrency and resource limits because multiplexing can put many active streams on one connection.
 
+Client-library behavior around unread response bodies matters for reuse. In Go 1.27, HTTP/1 response bodies now drain a bounded amount of unread content when `Response.Body.Close` is called, improving the chance that the underlying connection can be reused. This is an implementation detail of Go's transport rather than an HTTP protocol guarantee, so code should still close bodies promptly and avoid designing correctness around implicit draining.
+
 ## Key concepts
 
 **Status classes.** 2xx reports successful handling, 3xx redirection, 4xx client-facing request problems, and 5xx server-side failures. The specific code should help clients decide whether to fix input, authenticate, retry, or stop.
@@ -62,7 +64,7 @@ Another editor has already committed version 18. The server compares the validat
 
 The team also tests caching through the real proxy chain. An authenticated document must not become a shared cache entry visible to another user. They verify `Vary` behavior for negotiated representations and ensure errors containing sensitive details are not cached unexpectedly.
 
-On the client side, a Go worker reuses one `http.Client` and its transport, fully consumes or closes response bodies as appropriate, and sets a request deadline. A load test confirms connection reuse. Creating independent transports per request would fragment pools and cause unnecessary connection establishment.
+On the client side, a Go worker reuses one `http.Client` and its transport, closes every response body, and sets a request deadline. When a response can be discarded early, the team understands the transport behavior of its Go version rather than assuming unread bytes are harmless. With Go 1.27, bounded draining on close can preserve HTTP/1 connection reuse for small unread remainders; very large bodies or intentionally disabled keep-alives still require different handling. A load test confirms connection reuse. Creating independent transports per request would fragment pools and cause unnecessary connection establishment.
 
 ## Trade-offs
 
@@ -74,7 +76,7 @@ HTTP/2 and HTTP/3 can improve connection efficiency and concurrency, but interme
 
 State-changing `GET` requests can be triggered by crawlers, prefetchers, or caches. Retrying non-idempotent commands without operation identity can duplicate effects. Missing request-body limits permit memory or disk exhaustion.
 
-Not consuming or closing client response bodies can prevent connection reuse. Trusting arbitrary `X-Forwarded-For` or host headers can corrupt security decisions. Using a 200 response for every error forces clients to parse application text rather than rely on protocol semantics.
+Not closing client response bodies can leak resources and prevent reuse; relying on version-specific draining behavior without understanding its bounds can also produce surprising connection churn. Trusting arbitrary `X-Forwarded-For` or host headers can corrupt security decisions. Using a 200 response for every error forces clients to parse application text rather than rely on protocol semantics.
 
 Cache configuration is another risk: a response can be semantically correct at the origin yet leak through an incorrectly shared cache.
 
@@ -92,7 +94,7 @@ Avoid inventing custom semantics that contradict standard methods and status cod
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should understand method safety/idempotency, conditional requests, caching, representation metadata, connection reuse, proxy trust, body limits, and end-to-end deadlines.
+A Senior Engineer should understand method safety/idempotency, conditional requests, caching, representation metadata, connection reuse, response-body lifecycle, proxy trust, body limits, and end-to-end deadlines. For languages with managed transports such as Go, they should know which connection-reuse behaviors come from the client implementation and may change across runtime versions.
 
 They should debug across application and transport layers: distinguish a cache hit, proxy timeout, connection setup problem, HTTP status failure, and completed request with an uncertain business outcome.
 
@@ -102,4 +104,4 @@ A Staff Engineer should define organization-wide HTTP conventions that improve c
 
 They should evaluate protocol upgrades and proxy architecture based on measured workloads and failure modes, and ensure shared edge infrastructure does not silently weaken service-level security or reliability.
 
-Further reading: [RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110), [RFC 9111: HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111), [RFC 9114: HTTP/3](https://www.rfc-editor.org/rfc/rfc9114).
+Further reading: [RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110), [RFC 9111: HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111), [RFC 9114: HTTP/3](https://www.rfc-editor.org/rfc/rfc9114), [Go 1.27 release notes](https://go.dev/doc/go1.27).
