@@ -41,6 +41,8 @@ On termination, Kubernetes sends SIGTERM and waits up to the pod's termination g
 
 **Requests and limits.** Requests influence placement and resource accounting; limits govern runtime caps. They solve different problems.
 
+**cgroup version.** Kubernetes resource enforcement on Linux depends on the node's cgroup implementation. cgroup v2 has been stable in Kubernetes since v1.25. Starting with Kubernetes v1.35, `failCgroupV1` defaults to `true`, so a kubelet does not start on a cgroup v1 node unless an administrator deliberately enables the temporary fallback. The Kubernetes project schedules removal of that fallback for v1.38.
+
 **Pod Disruption Budget.** Limits voluntary disruptions such as drains and upgrades; it does not prevent involuntary node failure.
 
 **Topology spread and anti-affinity.** Help place replicas across failure domains. Replica count alone does not guarantee spread.
@@ -55,7 +57,7 @@ The team changes the probe design. Liveness checks only the process/runtime stat
 
 The service handles SIGTERM by immediately failing readiness, waiting for endpoint removal to propagate, stopping new background work, and draining in-flight requests before exiting.
 
-Resource requests are based on measured steady CPU and memory; limits are tested under burst load. The team runs `kubectl get pods`, `kubectl describe pod`, `kubectl get events`, `kubectl top`, rollout status, and EndpointSlice inspection during a controlled rollout to verify the lifecycle.
+Resource requests are based on measured steady CPU and memory; limits are tested under burst load. Before a Kubernetes minor upgrade, the platform team also checks every Linux node's cgroup version with `stat -fc %T /sys/fs/cgroup/`: `cgroup2fs` indicates cgroup v2. Monitoring and security agents that inspect the cgroup filesystem are included in the compatibility check because cgroup v1 and v2 expose different interfaces. The team runs `kubectl get pods`, `kubectl describe pod`, `kubectl get events`, `kubectl top`, rollout status, and EndpointSlice inspection during a controlled rollout to verify the lifecycle.
 
 A node-drain test confirms enough replicas remain available and that the PodDisruptionBudget does not get mistaken for protection against an abrupt node crash.
 
@@ -77,6 +79,8 @@ Insufficient termination grace and application shutdown handling lose requests d
 
 Another pitfall is treating an Ingress-controller migration as a syntax conversion. Ingress implementations historically encode behavior through annotations and `ImplementationSpecific` paths; translating resources without testing the effective routing semantics can produce subtle production regressions.
 
+A second upgrade pitfall is assuming cgroup compatibility from the Kubernetes version alone. A cluster can have supported control-plane software while one Linux node, container runtime, monitoring agent, or language runtime still assumes cgroup v1. That incompatibility may surface only during node replacement or kubelet restart.
+
 ## When to use it
 
 Use Kubernetes when the organization benefits from a shared orchestration platform, many containerized services, policy control, and extensible scheduling or lifecycle behavior.
@@ -91,7 +95,7 @@ Do not use Kubernetes objects as a substitute for application-level durability, 
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should understand Deployments, Pods, Services, EndpointSlices, probes, requests and limits, events, graceful termination, Jobs, ConfigMaps and Secrets, Ingress versus Ingress controllers, the role of Gateway API, and common `kubectl` inspection flows.
+A Senior Engineer should understand Deployments, Pods, Services, EndpointSlices, probes, requests and limits, cgroup v2 implications, events, graceful termination, Jobs, ConfigMaps and Secrets, Ingress versus Ingress controllers, the role of Gateway API, and common `kubectl` inspection flows.
 
 They should distinguish Pending scheduling failures, CrashLoopBackOff application failures, readiness failures, image-pull problems, OOM termination, and service-routing issues from evidence.
 
@@ -101,4 +105,4 @@ A Staff Engineer should define cluster tenancy, upgrade strategy, workload ident
 
 They should decide which Kubernetes complexity is exposed to product teams and which is safely standardized, while ensuring abstractions remain debuggable.
 
-Further reading: [Kubernetes concepts](https://kubernetes.io/docs/concepts/), [Application debugging](https://kubernetes.io/docs/tasks/debug/debug-application/), [Ingress controllers](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/), [Ingress NGINX retirement](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), [Ingress2Gateway](https://kubernetes.io/blog/2026/03/20/ingress2gateway-1-0-release/).
+Further reading: [Kubernetes concepts](https://kubernetes.io/docs/concepts/), [Application debugging](https://kubernetes.io/docs/tasks/debug/debug-application/), [About cgroup v2](https://kubernetes.io/docs/concepts/architecture/cgroups/), [The shift to cgroup v2](https://kubernetes.io/blog/2026/10/06/kubernetes-cgroups-v2-shift/), [Ingress controllers](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/), [Ingress NGINX retirement](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), [Ingress2Gateway](https://kubernetes.io/blog/2026/03/20/ingress2gateway-1-0-release/).
