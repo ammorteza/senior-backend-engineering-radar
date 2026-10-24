@@ -43,6 +43,8 @@ SDK exporters should use bounded queues and timeouts. If the backend is unavaila
 
 **Collector pipeline.** Central processing helps standardize redaction and routing, but collectors need their own capacity, scaling, and failure monitoring.
 
+**Versioned metrics.** Collector components can need migration paths when semantic-convention changes alter metric names, types, or attributes. OpenTelemetry Collector Contrib v0.160.0 introduced versioned process metrics in the hostmetrics receiver, allowing legacy and release-candidate definitions to coexist and be selected through feature gates instead of forcing every user to switch schemas immediately.
+
 ## Production example
 
 A Go API handles HTTP requests and publishes jobs to a queue. Auto-instrumentation already creates inbound HTTP spans and outbound database spans. The team adds one manual span around the domain operation rather than wrapping every library call again.
@@ -53,7 +55,9 @@ A collector receives OTLP telemetry. A processor removes sensitive request attri
 
 The team deliberately blocks the tracing backend. Collector and SDK queues reach bounded limits; dropped telemetry is reported, but API request latency remains within objective. This verifies that observability failure does not become an application outage.
 
-During a semantic-convention upgrade, the team checks current stability guidance and dashboard queries before switching attribute names. It does not assume every convention family changes in lockstep. For example, when previewing the OpenTelemetry Java agent 3.0 behavior, it compares database attributes such as `db.system` versus `db.system.name`, verifies connection-pool metric names and units, and inspects messaging traces because newer conventions can change span names and parent/link relationships. The rollout is accepted only after alerts, SLO queries, dashboards, and downstream processors work against the new telemetry shape.
+During a semantic-convention upgrade, the team checks current stability guidance and dashboard queries before switching attribute names. It does not assume every convention family changes in lockstep. For example, when previewing the OpenTelemetry Java agent 3.0 behavior, it compares database attributes such as `db.system` versus `db.system.name`, verifies connection-pool metric names and units, and inspects messaging traces because newer conventions can change span names and parent/link relationships.
+
+The same discipline applies to Collector host metrics. When testing the v0.160.0 release-candidate process metrics, the team enables the versioned output in a non-production collector first, compares old and new metric names, types, attributes, and units, then validates dashboards, alerts, recording rules, and downstream transforms before changing fleet-wide defaults.
 
 ## Trade-offs
 
@@ -69,7 +73,7 @@ Double instrumentation creates duplicate spans and distorted latency. Missing pr
 
 Sensitive HTTP headers, SQL values, or message payloads can leak through attributes. Sampling reduces cost but is not a privacy mechanism.
 
-A subtler failure is upgrading instrumentation while treating telemetry as if only attribute names changed. Unit changes can invalidate alert thresholds, renamed metrics can make dashboards silently empty, and messaging-convention changes can alter trace topology. Dual-emission modes help migration but do not necessarily preserve every legacy metric or trace shape.
+A subtler failure is upgrading instrumentation while treating telemetry as if only attribute names changed. Unit changes can invalidate alert thresholds, renamed metrics can make dashboards silently empty, and messaging-convention changes can alter trace topology. Versioned or dual-emission migration modes reduce rollout risk, but they still require explicit query and dashboard validation before the legacy shape is removed.
 
 Unbounded exporter queues or synchronous export on request paths can turn telemetry outages into application memory or latency incidents.
 
@@ -97,4 +101,4 @@ A Staff Engineer should own semantic-convention upgrades as cross-service schema
 
 They should make instrumentation interoperable without requiring every team to understand backend-specific export details, while preserving escape hatches for domain-specific signals.
 
-Further reading: [OpenTelemetry concepts](https://opentelemetry.io/docs/concepts/), [Semantic conventions](https://opentelemetry.io/docs/specs/semconv/), [OpenTelemetry Java agent 3.0 preview](https://opentelemetry.io/blog/2026/java-agent-3.0-preview/).
+Further reading: [OpenTelemetry concepts](https://opentelemetry.io/docs/concepts/), [Semantic conventions](https://opentelemetry.io/docs/specs/semconv/), [OpenTelemetry Java agent 3.0 preview](https://opentelemetry.io/blog/2026/java-agent-3.0-preview/), [Versioned metrics in hostmetrics](https://opentelemetry.io/blog/2026/hostmetrics-process-scraper-rc/).
