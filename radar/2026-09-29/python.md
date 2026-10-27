@@ -27,6 +27,8 @@ Processes provide separate interpreters and can use multiple CPU cores, at the c
 
 Virtual environments isolate Python packages for a project. They do not isolate OS permissions or make dependencies reproducible by themselves; exact interpreter and dependency versions still need controlled installation.
 
+Python 3.15, released in October 2026, adds explicit `lazy import` declarations. A lazily imported module is loaded on first use, not when the declaration is encountered. This can reduce startup work in large CLI or worker applications, but it also moves import errors and module initialization side effects to the first access. Measure startup and first-request latency separately rather than assuming the work disappeared.
+
 ## Key concepts
 
 **Dynamic typing and type hints.** Type annotations support static tools but generally do not enforce types at runtime. Boundary validation remains necessary.
@@ -39,6 +41,10 @@ Virtual environments isolate Python packages for a project. They do not isolate 
 
 **Packaging.** Lock files or pinned dependency sets, build metadata, and supported Python versions reduce environment drift.
 
+**Encoding defaults.** Starting with Python 3.15, text I/O without an explicit encoding defaults to UTF-8 rather than the locale's encoding, unless UTF-8 mode is explicitly disabled. Code that reads historical files encoded for a particular locale may therefore behave differently across interpreter versions. State the file contract with `encoding=` instead of depending on a machine default.
+
+**Free-threaded builds.** The optional no-GIL CPython build can run Python threads in parallel, but extensions and dependencies must be tested for compatibility and thread safety. Python 3.15's stable ABI for free-threaded builds helps extension portability; it is not a guarantee that an arbitrary application becomes safe or faster.
+
 **Serialization security.** Some Python serialization mechanisms can execute code when loading untrusted data; use safe formats and parsers appropriate to the trust boundary.
 
 ## Production example
@@ -47,9 +53,11 @@ A data-migration tool reads one million CSV records and updates an HTTP API. The
 
 The team switches to an async HTTP client and adds a semaphore limiting concurrency to 50 so the migration does not overload the target service. Per-request deadlines and retry rules match the API's idempotency contract.
 
-The tool writes a durable checkpoint containing completed source IDs. On restart, it skips confirmed records instead of resending the entire file. Input parsing validates currency and timestamp fields before any API call.
+The tool writes a durable checkpoint containing completed source IDs. On restart, it skips confirmed records instead of resending the entire file. Input parsing validates currency and timestamp fields before any API call. The source file's encoding is declared explicitly, for example `open(path, encoding="utf-8", newline="")`, rather than inherited from the worker host. When upgrading from Python 3.14 to 3.15, the team tests a legacy non-UTF-8 fixture and decides whether to reject it or decode it using its documented source encoding; a silent change in text decoding must not corrupt migration records.
 
 A test intentionally stops the process after several thousand records, then restarts it and verifies exactly the expected business operations were applied. Runtime metrics track request rate, retry count, and checkpoint progress.
+
+If the CLI later lazily imports an optional reporting package to improve startup, the test suite exercises the first report request too. A missing optional dependency should fail at that boundary with an actionable error, not surprise the operator halfway through a production migration.
 
 ## Trade-offs
 
@@ -61,7 +69,7 @@ Async I/O can handle many connections efficiently but increases cognitive comple
 
 Mutable default arguments, implicit timezone handling, swallowed exceptions in background tasks, unbounded `asyncio.gather`, and blocking calls in the event loop are frequent sources of bugs.
 
-Unpinned dependencies or native wheels built for a different platform can make deployments non-reproducible.
+Unpinned dependencies or native wheels built for a different platform can make deployments non-reproducible. Python upgrades can also change text decoding defaults or defer import-time failures when lazy imports are introduced; test actual startup, first-use paths, and representative input encodings.
 
 Unsafe deserialization, shell command construction from input, and secret leakage are security risks unrelated to type hints.
 
@@ -79,7 +87,7 @@ Conversely, for strict tail-latency or pure-Python CPU-heavy workloads, validate
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should understand packaging, virtual environments, type-hint limits, exceptions, context managers, asyncio versus threads and processes, cancellation, and bounded concurrency.
+A Senior Engineer should understand packaging, virtual environments, type-hint limits, exceptions, context managers, asyncio versus threads and processes, cancellation, and bounded concurrency. They should review interpreter upgrades for changes in I/O defaults, import timing, extension compatibility, and operational diagnostics—not only syntax.
 
 They should design restart-safe operational scripts and validate external input explicitly.
 
@@ -89,4 +97,4 @@ A Staff Engineer should define supported interpreter and tool versions, dependen
 
 They should standardize safe async patterns, observability, and deployment paths while allowing Python where its ecosystem provides the best leverage.
 
-Further reading: [Python documentation](https://docs.python.org/3/), [asyncio](https://docs.python.org/3/library/asyncio.html).
+Further reading: [Python documentation](https://docs.python.org/3/), [asyncio](https://docs.python.org/3/library/asyncio.html), [What's new in Python 3.15](https://docs.python.org/3.15/whatsnew/3.15.html), [Python 3.15.2 security maintenance release](https://www.python.org/downloads/release/python-3152/).
