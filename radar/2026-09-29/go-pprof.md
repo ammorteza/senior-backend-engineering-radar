@@ -23,7 +23,7 @@ A CPU profile samples the stacks of goroutines executing on CPU during a bounded
 
 Heap/alloc profiles sample allocation stacks. `inuse_space` or `inuse_objects` emphasize currently retained heap; `alloc_space` or `alloc_objects` emphasize cumulative allocation activity. A service can have high allocation churn without a leak, or a slowly growing live heap with modest allocation rate.
 
-Goroutine profiles show current stack states and are useful for leaks or blocked goroutines. Mutex and block profiles expose contention, but require appropriate runtime sampling settings and add overhead.
+Ordinary goroutine profiles show current stack states. They help investigate leaks, but cannot by themselves tell a permanently stranded goroutine from one legitimately waiting for work. Go 1.27 adds a separate `goroutineleak` profile, collected through `runtime/pprof` or `/debug/pprof/goroutineleak` when the HTTP handlers are installed. It detects goroutines that cannot be unblocked through reachable channel or `sync` primitives. Mutex and block profiles expose contention instead; they require appropriate runtime sampling settings and add overhead.
 
 `go tool pprof` can show top tables, call graphs, source/line views, and compare profiles. “Flat” cost belongs directly to a function; “cumulative” cost includes descendants.
 
@@ -41,6 +41,8 @@ Production HTTP pprof endpoints should be access-controlled. Exposing them publi
 
 **Diff/base profile.** Comparing before and after under the same workload can isolate regressions more reliably than staring at two separate top lists.
 
+**Leak detection is narrower than a goroutine dump.** Go 1.27's `goroutineleak` profile reports goroutines stranded on channels, blocking `select`, and supported `sync` primitives. It does not prove that a service is leak-free: a blocked network read, custom spin lock, or channel still reachable from a live goroutine may evade detection. The analysis also adds GC work, so schedule collection deliberately rather than polling it continuously.
+
 ## Production example
 
 A document-rendering API's CPU rises 70% after a feature release. Request volume is unchanged.
@@ -53,6 +55,8 @@ A benchmark verifies the local change. Then the same production-like load test i
 
 The team does not conclude “all allocations are bad” or introduce a global object pool without evidence. The optimization targets one measured hot path.
 
+A different incident needs a different profile. A worker fan-out returns after the first error, leaving other workers blocked forever while sending results on an unbuffered channel. A normal goroutine dump shows blocked senders, but cannot prove whether a receiver might return. On Go 1.27, the team captures the `goroutineleak` profile and locates the stranded send operation. It fixes the worker's cancellation and result-collection lifecycle, then verifies with a cancellation test and a second profile. A zero leak count alone would not rule out stuck network I/O.
+
 ## Trade-offs
 
 pprof provides strong attribution with usually manageable overhead. CPU and heap sampling are far cheaper than recording every event, but they provide less chronological detail than the execution tracer.
@@ -61,7 +65,7 @@ Contention profiles can add overhead if sampling is aggressive. Longer profiles 
 
 ## Failure modes / pitfalls
 
-Capturing an idle interval produces a profile of idle behavior. Comparing profiles from different workloads or binaries can create false conclusions.
+Capturing an idle interval produces a profile of idle behavior. Comparing profiles from different workloads or binaries can create false conclusions. An empty `goroutineleak` profile is not a general proof of goroutine liveness, and a blocked ordinary goroutine stack is not automatically a leak.
 
 Heap size is not the same as process RSS. A small heap profile does not rule out native memory, stacks, mappings, or kernel cache.
 
@@ -81,7 +85,7 @@ Do not optimize from a profile collected under an irrelevant synthetic workload.
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should select the correct profile type, interpret flat/cumulative cost, compare allocation and retention, and validate changes under equivalent load.
+A Senior Engineer should select the correct profile type, interpret flat/cumulative cost, compare allocation and retention, and validate changes under equivalent load. For goroutine incidents, they should distinguish ordinary goroutine snapshots, the Go 1.27 leak detector's limited proof, and runtime execution traces.
 
 They should collect profiles securely and account for sampling and runtime configuration.
 
@@ -91,4 +95,4 @@ A Staff Engineer should provide secure production profile collection, representa
 
 They should ensure profiling is used to test hypotheses rather than institutionalize premature optimization.
 
-Further reading: [Go diagnostics](https://go.dev/doc/diagnostics), [pprof](https://github.com/google/pprof).
+Further reading: [Go diagnostics](https://go.dev/doc/diagnostics), [pprof](https://github.com/google/pprof), [Go 1.27 goroutine leak profiles](https://go.dev/blog/goroutine-leak-profiles).
