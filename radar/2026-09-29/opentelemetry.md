@@ -29,6 +29,8 @@ Logs can carry trace/span correlation and structured attributes through OTel's l
 
 The **OpenTelemetry Collector** receives telemetry, processes it, and exports it to one or more backends. Receivers, processors, exporters, and connectors form pipelines. Processors can batch, sample, filter, redact, enrich, or transform data.
 
+For policy-driven transformations, Collector components such as the transform and filter processors evaluate OpenTelemetry Transformation Language (OTTL) statements against incoming records. Each statement uses a function, a path into a particular signal (for example, `span.attributes`), and optionally a `where` condition. Statements run in configuration order; a filtering rule drops matching records rather than merely changing their attributes. OTTL is a processing language, not a replacement for the semantic conventions that define what telemetry fields mean.
+
 SDK exporters should use bounded queues and timeouts. If the backend is unavailable, telemetry may be dropped after bounded retries rather than consuming application memory indefinitely.
 
 ## Key concepts
@@ -45,6 +47,8 @@ SDK exporters should use bounded queues and timeouts. If the backend is unavaila
 
 **Versioned metrics.** Collector components can need migration paths when semantic-convention changes alter metric names, types, or attributes. OpenTelemetry Collector Contrib v0.160.0 introduced versioned process metrics in the hostmetrics receiver, allowing legacy and release-candidate definitions to coexist and be selected through feature gates instead of forcing every user to switch schemas immediately.
 
+**OTTL v1 compatibility boundary.** As of Collector Contrib v0.164.0 (October 2026), OTTL syntax and its standard functions for traces, metrics, and logs have a backward-compatibility commitment through 1.x. This does *not* make the transform processor itself stable, nor does it cover experimental lambda functions, experimental functions behind `pkg.ottl.functions.enableExperimental`, or developing profiles support. Older Collector configurations still need an upgrade review: removed deprecated functions and retired feature gates can prevent startup.
+
 ## Production example
 
 A Go API handles HTTP requests and publishes jobs to a queue. Auto-instrumentation already creates inbound HTTP spans and outbound database spans. The team adds one manual span around the domain operation rather than wrapping every library call again.
@@ -59,13 +63,15 @@ During a semantic-convention upgrade, the team checks current stability guidance
 
 The same discipline applies to Collector host metrics. When testing the v0.160.0 release-candidate process metrics, the team enables the versioned output in a non-production collector first, compares old and new metric names, types, attributes, and units, then validates dashboards, alerts, recording rules, and downstream transforms before changing fleet-wide defaults.
 
+For a concrete Collector policy, suppose an older client accidentally emits `enduser.email` on spans. The team can remove that attribute before export using an OTTL transform statement such as `delete_key(span.attributes, "enduser.email")` in the trace pipeline. It tests the rule with representative spans and separately inspects logs and metric attributes: a span-only transform cannot sanitize other signals or fields. On upgrading to v0.164.0, the team validates the Collector configuration and any deprecated OTTL feature gates in staging, then checks actual exported telemetry. A stable language grammar does not guarantee that a policy is complete or that the processing pipeline is risk-free.
+
 ## Trade-offs
 
 OTel reduces proprietary instrumentation and enables shared conventions. It introduces SDK/collector configuration, version management, and another operational pipeline.
 
 Auto-instrumentation is quick to adopt but can produce too much low-value detail. Manual instrumentation gives domain context but requires consistent engineering effort.
 
-Central collectors simplify policy and backend routing while adding a shared dependency for telemetry delivery.
+Central collectors simplify policy and backend routing while adding a shared dependency for telemetry delivery. OTTL provides expressive centralized transformations, but complex statements consume CPU and can obscure where data was changed; prefer a few reviewable, tested rules over an opaque policy program.
 
 ## Failure modes / pitfalls
 
@@ -75,7 +81,7 @@ Sensitive HTTP headers, SQL values, or message payloads can leak through attribu
 
 A subtler failure is upgrading instrumentation while treating telemetry as if only attribute names changed. Unit changes can invalidate alert thresholds, renamed metrics can make dashboards silently empty, and messaging-convention changes can alter trace topology. Versioned or dual-emission migration modes reduce rollout risk, but they still require explicit query and dashboard validation before the legacy shape is removed.
 
-Unbounded exporter queues or synchronous export on request paths can turn telemetry outages into application memory or latency incidents.
+Unbounded exporter queues or synchronous export on request paths can turn telemetry outages into application memory or latency incidents. An OTTL transformation that changes an attribute used by an alert or routing rule can silently break monitoring; `error_mode: ignore` keeps the pipeline running on statement errors but is not a substitute for testing the output.
 
 ## When to use it
 
@@ -101,4 +107,4 @@ A Staff Engineer should own semantic-convention upgrades as cross-service schema
 
 They should make instrumentation interoperable without requiring every team to understand backend-specific export details, while preserving escape hatches for domain-specific signals.
 
-Further reading: [OpenTelemetry concepts](https://opentelemetry.io/docs/concepts/), [Semantic conventions](https://opentelemetry.io/docs/specs/semconv/), [OpenTelemetry Java agent 3.0 preview](https://opentelemetry.io/blog/2026/java-agent-3.0-preview/), [Versioned metrics in hostmetrics](https://opentelemetry.io/blog/2026/hostmetrics-process-scraper-rc/).
+Further reading: [OpenTelemetry concepts](https://opentelemetry.io/docs/concepts/), [Semantic conventions](https://opentelemetry.io/docs/specs/semconv/), [OpenTelemetry Java agent 3.0 preview](https://opentelemetry.io/blog/2026/java-agent-3.0-preview/), [Versioned metrics in hostmetrics](https://opentelemetry.io/blog/2026/hostmetrics-process-scraper-rc/), [OTTL v1 announcement](https://opentelemetry.io/blog/2026/ottl-v1/), [Collector transform processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor).
