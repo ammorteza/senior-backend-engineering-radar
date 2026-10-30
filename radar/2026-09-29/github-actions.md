@@ -27,7 +27,7 @@ Artifacts store build outputs for later jobs or download. Caches accelerate repl
 
 Environments can add deployment protection and scope secrets. OpenID Connect allows a workflow to exchange its GitHub identity for short-lived cloud credentials instead of storing long-lived cloud keys.
 
-Third-party actions execute code. Pinning to reviewed immutable commit SHAs gives stronger supply-chain control than floating tags.
+Third-party actions execute code. Pinning to reviewed immutable commit SHAs gives stronger supply-chain control than floating tags. Since October 28, 2026, GitHub Actions workflow dependency lockfiles are generally available: an onboarded workflow can keep readable `uses: owner/action@v3` references while GitHub executes the commit recorded in `.github/workflows/actions.lock`. This is an alternative to writing full SHAs directly in workflow YAML, not a reason to stop reviewing action updates.
 
 ## Key concepts
 
@@ -40,6 +40,8 @@ Third-party actions execute code. Pinning to reviewed immutable commit SHAs give
 **Caches.** Performance optimization only. Cache poisoning should not be able to change the integrity of a release.
 
 **Runner isolation.** Persistent self-hosted runners can retain files or malicious changes across jobs unless carefully isolated and cleaned.
+
+**Action dependency lockfiles.** The `gh actions-lock` CLI extension generates the lockfile; do not hand-edit it. For an onboarded workflow, every referenced action must be locked, including action dependencies that invoke other actions. The recorded commit and source repository identity are checked when the workflow runs. The lockfile does not pin `jobs.<job_id>.uses` calls to reusable workflows; pin those calls to full commit SHAs, and manage the called workflow's own action dependencies in its repository. Dependabot can update lockfile entries when it updates an onboarded workflow's action versions.
 
 ## Production example
 
@@ -55,17 +57,23 @@ Concurrency settings ensure only one production deployment proceeds at a time. A
 
 The team tests that a fork PR cannot print deployment secrets or obtain the production cloud role.
 
+During a CI supply-chain review, the team notices `actions/checkout@v4` and a third-party setup action referenced by floating major-version tags. Instead of relying on the tags staying put, it reviews the current dependencies, generates `.github/workflows/actions.lock` using `gh actions-lock`, and onboards the test workflow first. Reviewers inspect the resolved commits and repository identities, then verify that CI runs the locked versions. When a future Dependabot PR changes an action, the lockfile diff makes the executable change explicit. A reusable deployment workflow called from another repository remains pinned by full SHA, because this repository's lockfile does not lock that call.
+
+This controls action resolution; it does not pin runner images, packages downloaded by scripts, or arbitrary network inputs. Nor does a locked action become trustworthy merely because its SHA is immutable.
+
 ## Trade-offs
 
 Hosted runners remove fleet maintenance but create platform coupling and execution cost. Self-hosted runners offer custom hardware or network access while adding isolation and patching responsibilities.
 
 Aggressive caching speeds builds but can make correctness depend on hidden state if build steps are not reproducible.
 
-Reusable workflows reduce duplication, but a change to a widely shared workflow has organization-wide blast radius.
+Reusable workflows reduce duplication, but a change to a widely shared workflow has organization-wide blast radius. Lockfiles improve auditability and transitive action pinning but add a generated file to review and maintain; a stale lockfile can block an onboarded workflow until the dependency change is reconciled.
 
 ## Failure modes / pitfalls
 
-Privileged `pull_request_target` workflows that check out attacker-controlled code are a critical mistake. Long-lived cloud secrets, mutable action tags, overly broad `GITHUB_TOKEN` permissions, and persistent shared runners expand the blast radius.
+Privileged `pull_request_target` workflows that check out attacker-controlled code are a critical mistake. Long-lived cloud secrets, mutable action tags without lockfiles or SHA pinning, overly broad `GITHUB_TOKEN` permissions, and persistent shared runners expand the blast radius.
+
+A lockfile can also create false confidence if reviewers approve every regenerated pin without checking the upstream change, or assume it covers reusable workflow calls and all downloaded build inputs. The recorded commit establishes *which code runs*, not whether that code is safe.
 
 Logging commands or environment can expose secrets despite masking. Deploying by rebuilding source instead of using the reviewed artifact can break provenance.
 
@@ -85,14 +93,14 @@ If the workflow needs capabilities GitHub-hosted Actions cannot provide safely, 
 
 ## What a Senior Engineer should know
 
-A Senior Engineer should design job dependencies, immutable artifacts, caches, permissions, OIDC, environments, and concurrency controls.
+A Senior Engineer should design job dependencies, immutable artifacts, caches, permissions, OIDC, environments, and concurrency controls. They should be able to explain the difference between a mutable action tag, a full-SHA reference, and an Actions lockfile, including what a lockfile does not cover.
 
 They should understand workflow event trust and reproduce key checks locally where practical.
 
 ## What a Staff Engineer should understand
 
-A Staff Engineer should establish trusted build provenance, reusable workflows, action-pinning policy, runner isolation, and cloud-identity boundaries across repositories.
+A Staff Engineer should establish trusted build provenance, reusable workflows, action-pinning or lockfile policy, runner isolation, and cloud-identity boundaries across repositories. For lockfile adoption, start with a pilot, assign ownership for reviewing changed commits, and add verification/enforcement only after update automation and recovery procedures are reliable.
 
 They should design CI/CD so platform convenience never requires exposing production credentials to unreviewed code.
 
-Further reading: [GitHub Actions security](https://docs.github.com/en/actions/security-for-github-actions), [OIDC in GitHub Actions](https://docs.github.com/en/actions/concepts/security/openid-connect).
+Further reading: [GitHub Actions security](https://docs.github.com/en/actions/security-for-github-actions), [OIDC in GitHub Actions](https://docs.github.com/en/actions/concepts/security/openid-connect), [Workflow dependency lockfiles](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles), [October 28, 2026 GA announcement](https://github.blog/changelog/2026-10-28-github-actions-workflow-lockfiles-are-generally-available/).
