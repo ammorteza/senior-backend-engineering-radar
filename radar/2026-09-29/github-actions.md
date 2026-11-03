@@ -31,7 +31,7 @@ Third-party actions execute code. Pinning to reviewed immutable commit SHAs give
 
 ## Key concepts
 
-**Event trust.** `pull_request` and `pull_request_target` have different privilege and checkout behavior. Running untrusted checkout code in a privileged target-context workflow is a serious risk.
+**Event trust.** `pull_request` and `pull_request_target` have different privilege and checkout behavior. Running untrusted checkout code in a privileged target-context workflow is a serious risk. On November 2, 2026, GitHub announced that public GitHub.com repositories will block `pull_request_target` by default from December 2 unless an applicable Actions event policy explicitly permits it. The default rule runs in evaluate mode beforehand, with enforcement brownouts on November 9 and 16 (16:00–18:00 UTC). Private/internal repositories and GitHub Enterprise Server are not affected by this particular default.
 
 **Permissions.** Set `permissions` at workflow or job scope to the minimum needed.
 
@@ -55,7 +55,7 @@ The deploy job depends on that artifact and targets a protected production envir
 
 Concurrency settings ensure only one production deployment proceeds at a time. A newer deployment can cancel a queued obsolete one according to policy.
 
-The team tests that a fork PR cannot print deployment secrets or obtain the production cloud role.
+The team tests that a fork PR cannot print deployment secrets or obtain the production cloud role. Ahead of the December 2, 2026 event-policy enforcement, it also inventories any public-repository `pull_request_target` workflows. For each, the team either migrates untrusted validation to `pull_request` or documents a narrow event-policy exception for a workflow that must act on PR metadata. The exception is reviewed independently of the workflow's checkout and token permissions. It uses GitHub Actions Insights and the November brownout failures to catch missed dependencies before enforcement.
 
 During a CI supply-chain review, the team notices `actions/checkout@v4` and a third-party setup action referenced by floating major-version tags. Instead of relying on the tags staying put, it reviews the current dependencies, generates `.github/workflows/actions.lock` using `gh actions-lock`, and onboards the test workflow first. Reviewers inspect the resolved commits and repository identities, then verify that CI runs the locked versions. When a future Dependabot PR changes an action, the lockfile diff makes the executable change explicit. A reusable deployment workflow called from another repository remains pinned by full SHA, because this repository's lockfile does not lock that call.
 
@@ -71,7 +71,7 @@ Reusable workflows reduce duplication, but a change to a widely shared workflow 
 
 ## Failure modes / pitfalls
 
-Privileged `pull_request_target` workflows that check out attacker-controlled code are a critical mistake. Long-lived cloud secrets, mutable action tags without lockfiles or SHA pinning, overly broad `GITHUB_TOKEN` permissions, and persistent shared runners expand the blast radius.
+Privileged `pull_request_target` workflows that check out attacker-controlled code are a critical mistake. Conversely, allowing that trigger globally merely to silence an event-policy block can recreate the very trust-boundary risk the default protects against. Long-lived cloud secrets, mutable action tags without lockfiles or SHA pinning, overly broad `GITHUB_TOKEN` permissions, and persistent shared runners expand the blast radius.
 
 A lockfile can also create false confidence if reviewers approve every regenerated pin without checking the upstream change, or assume it covers reusable workflow calls and all downloaded build inputs. The recorded commit establishes *which code runs*, not whether that code is safe.
 
@@ -103,4 +103,4 @@ A Staff Engineer should establish trusted build provenance, reusable workflows, 
 
 They should design CI/CD so platform convenience never requires exposing production credentials to unreviewed code.
 
-Further reading: [GitHub Actions security](https://docs.github.com/en/actions/security-for-github-actions), [OIDC in GitHub Actions](https://docs.github.com/en/actions/concepts/security/openid-connect), [Workflow dependency lockfiles](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles), [October 28, 2026 GA announcement](https://github.blog/changelog/2026-10-28-github-actions-workflow-lockfiles-are-generally-available/).
+Further reading: [GitHub Actions security](https://docs.github.com/en/actions/security-for-github-actions), [OIDC in GitHub Actions](https://docs.github.com/en/actions/concepts/security/openid-connect), [Workflow dependency lockfiles](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles), [October 28, 2026 GA announcement](https://github.blog/changelog/2026-10-28-github-actions-workflow-lockfiles-are-generally-available/), [November 2 event-policy change](https://github.blog/changelog/2026-11-02-pull_request_target-blocked-by-default-december-2/).
