@@ -41,6 +41,8 @@ SDK exporters should use bounded queues and timeouts. If the backend is unavaila
 
 **Instrumentation library versus manual spans.** Auto-instrumentation covers common frameworks; manual instrumentation adds domain operations. Duplicating both around the same call can produce confusing nested spans.
 
+**JavaScript SDK compatibility.** OpenTelemetry JS SDK 3.0, released November 5, 2026, requires Node.js 22.15 or later and ships ESM and CommonJS exports. Stable SDK packages use 3.x versions; experimental packages use 0.300.x, while `@opentelemetry/api` remains on its independent 1.x line. Logs API functionality moved from `@opentelemetry/api-logs` into `@opentelemetry/api`, and tracing SDK packages were consolidated into `@opentelemetry/sdk-trace`. These are dependency and runtime compatibility changes, not changes to the OTLP wire protocol.
+
 **Sampling.** Head sampling decides near span creation. Tail sampling in a collector can retain traces based on later information such as errors or latency, at greater infrastructure cost.
 
 **Collector pipeline.** Central processing helps standardize redaction and routing, but collectors need their own capacity, scaling, and failure monitoring.
@@ -63,6 +65,8 @@ During a semantic-convention upgrade, the team checks current stability guidance
 
 The same discipline applies to Collector host metrics. When testing the v0.160.0 release-candidate process metrics, the team enables the versioned output in a non-production collector first, compares old and new metric names, types, attributes, and units, then validates dashboards, alerts, recording rules, and downstream transforms before changing fleet-wide defaults.
 
+In a Node.js service, the team tests the JavaScript SDK 3.x upgrade in a staging build before changing production dependencies. It checks the actual Node runtime on container images and CI runners, updates removed or renamed tracing SDK imports, and validates startup under the project's ESM or CommonJS module mode. The team compares emitted traces, metrics, and logs with the old version, rather than treating a successful package install as proof of telemetry compatibility. An application using only the supported zero-code `@opentelemetry/auto-instrumentations-node` path may require no source change, but its runtime and emitted telemetry still deserve verification.
+
 For a concrete Collector policy, suppose an older client accidentally emits `enduser.email` on spans. The team can remove that attribute before export using an OTTL transform statement such as `delete_key(span.attributes, "enduser.email")` in the trace pipeline. It tests the rule with representative spans and separately inspects logs and metric attributes: a span-only transform cannot sanitize other signals or fields. On upgrading to v0.164.0, the team validates the Collector configuration and any deprecated OTTL feature gates in staging, then checks actual exported telemetry. A stable language grammar does not guarantee that a policy is complete or that the processing pipeline is risk-free.
 
 ## Trade-offs
@@ -79,7 +83,7 @@ Double instrumentation creates duplicate spans and distorted latency. Missing pr
 
 Sensitive HTTP headers, SQL values, or message payloads can leak through attributes. Sampling reduces cost but is not a privacy mechanism.
 
-A subtler failure is upgrading instrumentation while treating telemetry as if only attribute names changed. Unit changes can invalidate alert thresholds, renamed metrics can make dashboards silently empty, and messaging-convention changes can alter trace topology. Versioned or dual-emission migration modes reduce rollout risk, but they still require explicit query and dashboard validation before the legacy shape is removed.
+A subtler failure is upgrading instrumentation while treating telemetry as if only attribute names changed. JavaScript SDK 3.x can also fail earlier, at process startup or build time, when a service runs an unsupported Node version or imports packages removed or consolidated in the major release. Unit changes can invalidate alert thresholds, renamed metrics can make dashboards silently empty, and messaging-convention changes can alter trace topology. Versioned or dual-emission migration modes reduce rollout risk, but they still require explicit query and dashboard validation before the legacy shape is removed.
 
 Unbounded exporter queues or synchronous export on request paths can turn telemetry outages into application memory or latency incidents. An OTTL transformation that changes an attribute used by an alert or routing rule can silently break monitoring; `error_mode: ignore` keeps the pipeline running on statement errors but is not a substitute for testing the output.
 
@@ -107,4 +111,4 @@ A Staff Engineer should own semantic-convention upgrades as cross-service schema
 
 They should make instrumentation interoperable without requiring every team to understand backend-specific export details, while preserving escape hatches for domain-specific signals.
 
-Further reading: [OpenTelemetry concepts](https://opentelemetry.io/docs/concepts/), [Semantic conventions](https://opentelemetry.io/docs/specs/semconv/), [OpenTelemetry Java agent 3.0 preview](https://opentelemetry.io/blog/2026/java-agent-3.0-preview/), [Versioned metrics in hostmetrics](https://opentelemetry.io/blog/2026/hostmetrics-process-scraper-rc/), [OTTL v1 announcement](https://opentelemetry.io/blog/2026/ottl-v1/), [Collector transform processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor).
+Further reading: [OpenTelemetry JavaScript SDK 3.0 announcement](https://opentelemetry.io/blog/2026/otel-js-sdk-3-0/), [OpenTelemetry concepts](https://opentelemetry.io/docs/concepts/), [Semantic conventions](https://opentelemetry.io/docs/specs/semconv/), [OpenTelemetry Java agent 3.0 preview](https://opentelemetry.io/blog/2026/java-agent-3.0-preview/), [Versioned metrics in hostmetrics](https://opentelemetry.io/blog/2026/hostmetrics-process-scraper-rc/), [OTTL v1 announcement](https://opentelemetry.io/blog/2026/ottl-v1/), [Collector transform processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor).
