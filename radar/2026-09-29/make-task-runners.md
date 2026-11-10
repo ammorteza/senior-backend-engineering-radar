@@ -67,9 +67,29 @@ A Go service has four commands in its README that developers should run before o
 
 The team exposes six repository tasks: bootstrap, generate, test, lint, verify and build. Verify composes the checks expected before merge, and CI calls the same verify task. Bootstrap installs or validates pinned development tools.
 
-Six months later the team replaces its linter. Developers still run the same lint task; only its implementation changes.
+A small Makefile makes the contract visible (recipe indentation below must be actual tabs):
 
-The task runner has created a stable interface around an evolving toolchain.
+```make
+.PHONY: test lint verify generate
+test:
+	go test ./...
+
+lint:
+	golangci-lint run ./...
+
+verify: lint test
+
+generated/api.pb.go: api.proto
+	protoc --go_out=. api.proto
+
+generate: generated/api.pb.go
+```
+
+`verify` is phony because it is a command, while `generated/api.pb.go` is a real output: Make compares its modification time with `api.proto` and skips regeneration when the output is newer. The `generate` command remains phony so a same-named file cannot suppress the check. In a real repository, the team includes every input affecting generation—imported schemas, generator flags and tool versions—or timestamps may incorrectly declare stale output current. It also checks generated-file diffs in CI rather than trusting developer machines.
+
+The team discovers that an older recipe used `cd tools` on one line and `go generate ./...` on the next. Because Make normally starts a separate shell for each recipe line, the second command ran in the repository root. Replacing the two lines with `cd tools && go generate ./...` fixes the working-directory dependency and propagates failure. A leading `-` on a recipe command would instead tell Make to ignore its nonzero exit status, which is dangerous for verification gates.
+
+Six months later the team replaces its linter. Developers still run `make lint`; only its implementation changes. CI invokes `make verify` with the same pinned toolchain and Go version, so the interface remains stable without pretending that a common command alone guarantees reproducibility.
 
 ## Trade-offs
 
@@ -92,6 +112,8 @@ Make is ubiquitous on Unix-like systems and excellent at dependency-oriented bui
 **Platform assumptions leak in.** GNU utilities or shell features may behave differently on macOS, Linux and Windows.
 
 **The task file becomes a programming language.** Hundreds of lines of Make logic often indicate that part of the workflow belongs in a proper script or build tool.
+
+**Phony prerequisites force rebuilds.** Making an always-out-of-date `.PHONY` task a prerequisite of a real generated file can cause that file to regenerate on every invocation. Model actual source inputs as normal prerequisites, and use order-only prerequisites for setup that must happen first but should not invalidate an artifact merely because its timestamp changes.
 
 ## When to use it
 
@@ -122,3 +144,5 @@ A Staff Engineer should think about task runners as part of the **developer-plat
 The goal is not one enormous company Makefile. Teams may use Make, Task, Just, Gradle or ecosystem-native tools. What matters is a predictable interface and clear ownership.
 
 Staff-level judgment also means knowing when standardization has gone too far: a paved road should remove repetitive decisions without hiding so much machinery that teams can no longer understand or debug their own build.
+
+Further reading: [GNU Make rules and prerequisites](https://www.gnu.org/software/make/manual/html_node/Rule-Syntax.html), [GNU Make phony targets](https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html), [GNU Make recipe execution](https://www.gnu.org/software/make/manual/html_node/Execution.html).
