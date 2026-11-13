@@ -39,6 +39,8 @@ Vacuum reclaims eligible obsolete versions and maintains visibility and transact
 
 **Replicas and backups serve different failures.** A read replica may lag, and accidental deletion can replicate successfully. Tested restoration is still necessary.
 
+**Major-version support and minor-update discipline.** PostgreSQL majors receive approximately five years of community fixes. PostgreSQL 14 reached end of life with 14.25 on November 12, 2026; continuing to run it means no further community security or bug fixes. A minor update within a supported major normally replaces binaries without a data-directory migration, whereas a major upgrade requires `pg_upgrade` or dump/restore. Neither path should be confused with a zero-risk restart: release notes can prescribe post-update repair work.
+
 ## Production example
 
 A customer API's p95 latency rises sharply after a release. Application CPU remains normal. The initial suggestion is to add pods, but the engineer first separates pool waiting from SQL execution time.
@@ -48,6 +50,8 @@ Database activity shows many sessions waiting on locks, not consuming CPU. A mig
 The team identifies the blocking chain, confirms the business impact and safely cancels the problematic operation under its incident procedure. It then changes the migration rollout to use bounded lock acquisition and an appropriate compatible sequence. The application transaction that remained open is fixed to avoid waiting on a remote dependency while holding database resources.
 
 After mitigation, they verify pool wait, blocked sessions and request latency together. Later load tests include the migration and normal traffic, because an isolated SQL benchmark would not reproduce the lock interaction.
+
+Separately, before the next scheduled PostgreSQL patch, the team inventories its engine majors and extensions and reads the exact release notes. For the November 12, 2026 minor updates, that includes checking whether affected GIN or `pg_trgm` indexes need rebuilding and whether incremental-backup users need a fresh full backup. It stages the patch with representative queries, verifies index health and restore procedures, then schedules the restart and any follow-up maintenance. The engine's version number alone does not prove the database has completed all required remediation.
 
 This illustrative incident shows why PostgreSQL literacy is broader than index tuning. The right first question is which resource or dependency is delaying progress: CPU, storage, locks, connection acquisition or something outside the engine.
 
@@ -62,6 +66,8 @@ That flexibility also permits expensive queries and conflicting workloads. Repor
 Long transactions retain resources; oversized pools create contention; many indexes amplify writes; and stale statistics can lead to poor plans. An unbounded report can evict useful cache pages even if it never modifies data.
 
 Failover interrupts sessions and can leave a client uncertain whether a commit succeeded. Retrying writes without an operation identity can duplicate effects. A backup configuration that has never been restored is an unverified recovery claim. Treat these as application design concerns as well as database settings.
+
+Another trap is treating a successful minor-version restart as proof that the patch is finished. Some fixes require rebuilding affected indexes, repairing constraints, or refreshing the backup baseline. Conversely, deferring updates indefinitely can leave a service exposed to already-fixed defects, and remaining on an end-of-life major removes the upstream patch path altogether.
 
 ## When to use it
 
@@ -79,7 +85,7 @@ Do not reject PostgreSQL merely because future scale is uncertain. Compare reali
 
 A Senior Engineer should translate invariants into constraints, choose transaction boundaries, read plans and diagnose waits. They should configure pool limits across replicas and understand the effects of MVCC, WAL and maintenance on their service.
 
-They should participate in restore and failover exercises and explain the behavior of outstanding requests. A service owner needs to know more than how to write a connection string and run migrations.
+They should participate in restore and failover exercises, read the release notes for the deployed major and minor versions, and explain the behavior of outstanding requests. A service owner needs to know more than how to write a connection string and run migrations.
 
 ## What a Staff Engineer should understand
 
@@ -87,4 +93,4 @@ A Staff Engineer should plan workload isolation, recovery, upgrades and ownershi
 
 Establish service objectives and budgets for connections, query work and maintenance. Evaluate new databases or sharding when evidence shows a real boundary, while accounting for migration and long-term operating cost.
 
-Further reading: [PostgreSQL documentation](https://www.postgresql.org/docs/current/), [Monitoring statistics](https://www.postgresql.org/docs/current/monitoring-stats.html), [Explicit locking](https://www.postgresql.org/docs/current/explicit-locking.html).
+Further reading: [PostgreSQL documentation](https://www.postgresql.org/docs/current/), [Monitoring statistics](https://www.postgresql.org/docs/current/monitoring-stats.html), [Explicit locking](https://www.postgresql.org/docs/current/explicit-locking.html), [Versioning policy](https://www.postgresql.org/support/versioning/), [November 12, 2026 security and bug-fix release](https://www.postgresql.org/about/news/postgresql-187-1712-1616-1520-1425-and-19-rc-2-released-3442/).
